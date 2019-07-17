@@ -1,0 +1,56 @@
+{
+  "name": "@uxland/uxl-object-mapper",
+  "version": "0.0.0-development",
+  "description": "UXLand Object Mapper",
+  "homepage": "https://github.com/uxland/uxl-object-mapper#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uxland/uxl-object-mapper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/uxland/uxl-object-mapper/issues"
+  },
+  "author": "UXLand <dev@uxland.es> (http://www.uxland.es)",
+  "main": "lib/index.js",
+  "module": "es/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [],
+  "devDependencies": {
+    "@types/jest": "^24.0.12",
+    "@types/jest-when": "^2.4.0",
+    "@types/ramda": "^0.26.16",
+    "jest": "^24.5.0",
+    "jest-when": "^2.5.0",
+    "jsdom": "^11.11.0",
+    "mutation-observer": "^1.0.3",
+    "semantic-release": "^15.9.12",
+    "travis-deploy-once": "^5.0.7",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.3.3"
+  },
+  "dependencies": {
+    "date-fns": "^2.0.0-beta.2",
+    "ramda": "^0.26.1"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "npm run type-check -- --watch",
+    "build:es": "tsc -p tsconfig.build.json --outDir es  ",
+    "build:cjs": "tsc -p tsconfig.build.json --outDir lib --module commonjs --declaration",
+    "build": "npm run build:es && npm run build:cjs",
+    "test:ui:watch": "nodemon --watch test --watch src -x \"polymer test --config-file wct.config.json\"",
+    "test:ui": "polymer test --config-file wct.config.json",
+    "test:unit": "jest --collect-coverage",
+    "tdd": "jest --watch --collect-coverage",
+    "dist": "npm run build",
+    "travis-deploy-once": "travis-deploy-once",
+    "semantic-release": "semantic-release"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}
