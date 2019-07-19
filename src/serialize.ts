@@ -110,20 +110,25 @@ const proceedDeserialization = ({ input, serializers }) => {
     )(k);
     return output;
   }, R.keys(input));
-  console.log(input, output);
+  // console.log(input, output);
   return output;
 };
 
 export const deserialize = <S, D>(input: S, serializers?: SerializerInfo<S, D>[]): D => {
-  let r = R.pipe(
-    isInitial,
-    R.ifElse(isTrue, R.always(input), () => validateSerializers(serializers)),
-    R.cond([
-      [isTrue, () => proceedDeserialization({ input, serializers })],
-      [isFalse, R.always(undefined)],
-      [R.T, R.always(input)]
-    ])
-  )(serializers);
+  let r = R.cond([
+    [isInitial, R.always(input)],
+    [
+      R.T,
+      R.pipe(
+        validateSerializers,
+        R.cond([
+          [isTrue, () => proceedDeserialization({ input, serializers })],
+          [isFalse, R.always(undefined)],
+          [R.T, R.always(undefined)]
+        ])
+      )
+    ]
+  ])(serializers);
   return r as any;
 };
 
