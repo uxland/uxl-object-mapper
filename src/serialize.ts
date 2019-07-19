@@ -18,6 +18,14 @@ const isNotNil = R.complement(R.isNil);
 const isTrue = R.equals(true);
 const isFalse = R.equals(false);
 const isInitial = <S, D>(serializers: Serializer<D, S>) => R.either(R.isNil, R.isEmpty)(serializers);
+const isArray = R.is(Array);
+
+export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
+  serializers.forEach(s => {
+    if (!s.serializeProp) throw new Error(invalidSerializeProp);
+  });
+  return true;
+};
 
 export const serialize = <D, S>(input: D, serializers?: SerializerInfo<D, S>[]): S => {
   let output: S = {} as any;
@@ -48,64 +56,61 @@ export const serialize = <D, S>(input: D, serializers?: SerializerInfo<D, S>[]):
   return output;
 };
 
-export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
-  serializers.forEach(s => {
-    if (!s.serializeProp) throw new Error(invalidSerializeProp);
-  });
-  return true;
-};
-
 const findSerializer = <S, D>(serializers: SerializerInfo<S, D>[]) => (key: string) =>
   R.find(R.propEq('serializeProp', key))(serializers);
 const inputPassThrough = (input, output, k) => R.set(R.lensProp(k), R.prop(k, input), output);
+const assignInputToOutput = (input, output, originKey, destKey: string[] | string) =>
+  R.ifElse(
+    R.is(Array),
+    () => {
+      let r = {};
+      R.forEach(
+        k => {
+          r = R.set(R.lensProp(k), R.prop(originKey, input), r);
+        },
+        destKey as string[]
+      );
+      return R.merge(output, r);
+    },
+    R.always(moveInputProperty(input, output, originKey, destKey))
+  )(destKey);
+
 const moveInputProperty = (input, output, originKey, destKey) =>
-  R.set(R.lensProp(destKey), R.prop(originKey, input), output) && delete output[originKey];
-const executeDeserializerFn = (input, output, k, s) => {
-  console.log('in executeDeserializerFn', s);
-  let fn = R.path(['serializerFn', 'deserialize']);
-  // console.log(fn(R.prop(k, input)));
-  let r = R.set(R.lensProp(k), R.path(['serializerFn', 'deserialize'])(R.prop(k, input)), output);
-  // console.log(input, r);
-  return r;
-};
-const hasDeserializeProp = R.has('deserializeProp');
-const hasSerializerFn = s => {
-  let r = R.has('serializerFn')(s);
-  console.log(r, s);
-  return r;
-};
-const hasBoth = s => R.and(hasSerializerFn(s), hasDeserializeProp(s));
-const performDeserialization = (input, output, k) => s => {
-  let r = null;
-  r = R.cond([
-    [hasBoth, () => console.log('has deserialize & deserializeProp')],
-    [hasDeserializeProp, () => moveInputProperty(input, output, k, R.prop('deserializeProp', s))], //TODO: when isArray(deserializeProp)
-    [hasSerializerFn, () => executeDeserializerFn(input, output, k, s)],
-    [R.complement(hasBoth), () => inputPassThrough(input, output, k)]
-  ])(s);
-  // console.log(r);
-  // let a = R.pipe(
-  //   R.has('deserializeProp'),
-  //   R.cond([[isTrue, R.always(R.prop('deserializeProp', s))], [isFalse, () => console.log('no')]])
-  // )(s);
-  // if (a) r = R.set(R.lensProp(a), R.prop(k, input), output);
-  // delete input[k];
-  // console.log(a);
-  return r;
-};
-const proceedDeserialization = ({ input, serializers }) => {
-  let output = { ...input };
-  R.forEach(
-    (k: string) =>
-      R.pipe(
-        findSerializer(serializers),
-        R.cond([
-          [R.isNil, R.always(inputPassThrough(input, output, k))],
-          [isNotNil, performDeserialization(input, output, k)]
-        ])
-      )(k),
-    R.keys(input)
+  R.set(R.lensProp(destKey as string), R.prop(originKey, input), output);
+const executeDeserializerFn = (input, output, k, s) =>
+  R.set(R.lensProp(k), (R.path(['serializerFn', 'deserialize'])(s) as Function)(R.prop(k, input)), output);
+const fullDeserialization = (input, output, k, s) =>
+  R.set(
+    R.lensProp(R.prop('deserializeProp', s)),
+    (R.path(['serializerFn', 'deserialize'])(s) as Function)(R.prop(k, input)),
+    output
   );
+const hasDeserializeProp = R.has('deserializeProp');
+const hasSerializerFn = R.has('serializerFn');
+const hasBoth = s => R.and(hasSerializerFn(s), hasDeserializeProp(s));
+
+const performDeserialization = (input, output, k) => s =>
+  R.cond([
+    [hasBoth, () => fullDeserialization(input, output, k, s)],
+    [hasDeserializeProp, () => assignInputToOutput(input, output, k, R.prop('deserializeProp', s))],
+    [hasSerializerFn, () => executeDeserializerFn(input, output, k, s)],
+    [R.T, R.always(input)]
+  ])(s);
+
+const proceedDeserialization = ({ input, serializers }) => {
+  let output: any = {};
+  R.forEach((k: string) => {
+    output = R.pipe(
+      findSerializer(serializers),
+      R.ifElse(
+        R.isNil,
+        R.always(R.set(R.lensProp(k), R.prop(k, input), output)),
+        performDeserialization(input, output, k)
+      )
+    )(k);
+    return output;
+  }, R.keys(input));
+  console.log(input, output);
   return output;
 };
 
