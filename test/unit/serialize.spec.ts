@@ -171,7 +171,7 @@ describe('Serializer', () => {
           });
         });
         describe('If deserializeProp is multiple', () => {
-          it('all input[deserializeProp(n)] must be equal', () => {
+          it('a serializerFn must be defined', () => {
             const serializers: SerializerInfo<any, any>[] = [
               { serializeProp: 'foo', deserializeProp: ['foo1', 'foo2'] }
             ];
@@ -179,7 +179,7 @@ describe('Serializer', () => {
             const testValidInput = () => serialize(input, serializers);
             expect(testValidInput).toThrow(requiredSerializeFn);
           });
-          it('output[serializeProp] must be equal to each input[deserializeProp(n)]', () => {
+          it('if all input[deserializeProp(n)] are the same, output[serializeProp] must be equal to each input[deserializeProp(n)]', () => {
             const serializers: SerializerInfo<any, any>[] = [
               { serializeProp: 'foo', deserializeProp: ['foo1', 'foo2'] }
             ];
@@ -193,7 +193,24 @@ describe('Serializer', () => {
         describe('If deserializeProp is simple', () => {
           it('serialize(output[deserializeProp]) must be equal to input[serializeProp]', () => {
             const serializers: SerializerInfo<any, any>[] = [
-              { serializeProp: 'date', deserializeProp: ['sy-datum', 'sy-uzeit'], serializerFn: SAPDateSerializer }
+              { serializeProp: 'boolean', deserializeProp: 'BOOLEAN', serializerFn: SAPBooleanSerializer }
+            ];
+            const input = { BOOLEAN: 'X' };
+            const s = serializers[0];
+            const output = {
+              [s.serializeProp as string]: SAPBooleanSerializer.serialize(input[s.deserializeProp as string])
+            };
+            expect(serialize(input, serializers)).toStrictEqual(output);
+          });
+        });
+        describe('If deserializeProp is multiple', () => {
+          it('test', () => {
+            const serializers: SerializerInfo<any, any>[] = [
+              {
+                serializeProp: 'date',
+                deserializeProp: ['sy-datum', 'sy-uzeit'],
+                serializerFn: SAPDateSerializer
+              }
             ];
             const output = {
               ...input,
@@ -202,9 +219,6 @@ describe('Serializer', () => {
             (serializers[0].deserializeProp as string[]).forEach(p => delete output[p]);
             expect(serialize(input, serializers)).toStrictEqual(output);
           });
-        });
-        describe('If deserializeProp is multiple', () => {
-          it('serialize(output) must be equal to input[serializeProp]', () => {});
         });
       });
     });
