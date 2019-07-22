@@ -19,6 +19,9 @@ const isTrue = R.equals(true);
 const isFalse = R.equals(false);
 const isInitial = <S, D>(serializers: Serializer<D, S>) => R.either(R.isNil, R.isEmpty)(serializers);
 const isArray = R.is(Array);
+const isObject = R.is(Object);
+const validMultiple = (result: any, keys: string[]) => R.and(isObject(result), isArray(keys));
+const validSimple = (result: any, keys: string) => R.not(isArray(keys));
 
 export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
   serializers.forEach(s => {
@@ -58,100 +61,80 @@ export const serialize = <D, S>(input: D, serializers?: SerializerInfo<D, S>[]):
 
 const findSerializer = <S, D>(serializers: SerializerInfo<S, D>[]) => (key: string) =>
   R.find(R.propEq('serializeProp', key))(serializers);
-const inputPassThrough = (input, output, k) => R.set(R.lensProp(k), R.prop(k, input), output);
 const assignInputToOutput = (input, output, originKey, destKey: string[] | string) =>
   R.ifElse(
     R.is(Array),
     () => {
       let r = {};
-      R.forEach(
-        k => {
-          r = R.set(R.lensProp(k), R.prop(originKey, input), r);
-        },
-        destKey as string[]
-      );
+      R.forEach(k => (r = moveInputProperty(input, r, originKey, k)), destKey as string[]);
       return R.merge(output, r);
     },
-    R.always(moveInputProperty(input, output, originKey, destKey))
+    R.always(moveInputProperty(input, output, originKey, destKey as string))
   )(destKey);
 
-const moveInputProperty = (input, output, originKey, destKey) =>
-  R.set(R.lensProp(destKey as string), R.prop(originKey, input), output);
+const moveInputProperty = <S, D>(input: S, output: D, originKey: keyof S, destKey?: string): D =>
+  R.set(R.lensProp((destKey || originKey) as string), R.prop(originKey, input), output);
+const assignValue = <S, D>(output: D, value: any, key: string | string[]) =>
+  R.ifElse(
+    isArray,
+    () =>
+      R.reduce(
+        (collection, k) => R.set(R.lensProp(k as string), R.prop(k, value), collection),
+        output,
+        key as string[]
+      ),
+    () => R.set(R.lensProp(key as string), value, output)
+  )(key);
+const getDeserializerFn: Function = R.path(['serializerFn', 'deserialize']);
 const executeDeserializerFn = (input, output, k, s) =>
-  R.set(R.lensProp(k), (R.path(['serializerFn', 'deserialize'])(s) as Function)(R.prop(k, input)), output);
-const fullDeserialization = (input, output, k, s) =>
-  R.set(
-    R.lensProp(R.prop('deserializeProp', s)),
-    (R.path(['serializerFn', 'deserialize'])(s) as Function)(R.prop(k, input)),
-    output
-  );
-const hasDeserializeProp = R.has('deserializeProp');
-const hasSerializerFn = R.has('serializerFn');
-const hasBoth = s => R.and(hasSerializerFn(s), hasDeserializeProp(s));
-
-const performDeserialization = (input, output, k) => s =>
-  R.cond([
-    [hasBoth, () => fullDeserialization(input, output, k, s)],
-    [hasDeserializeProp, () => assignInputToOutput(input, output, k, R.prop('deserializeProp', s))],
-    [hasSerializerFn, () => executeDeserializerFn(input, output, k, s)],
-    [R.T, R.always(input)]
-  ])(s);
-
-const proceedDeserialization = ({ input, serializers }) => {
-  let output: any = {};
-  R.forEach((k: string) => {
-    output = R.pipe(
-      findSerializer(serializers),
-      R.ifElse(
-        R.isNil,
-        R.always(R.set(R.lensProp(k), R.prop(k, input), output)),
-        performDeserialization(input, output, k)
-      )
-    )(k);
-    return output;
-  }, R.keys(input));
-  // console.log(input, output);
-  return output;
-};
-
-export const deserialize = <S, D>(input: S, serializers?: SerializerInfo<S, D>[]): D => {
-  let r = R.cond([
-    [isInitial, R.always(input)],
+  R.set(R.lensProp(k), getDeserializerFn(s)(R.prop(k, input)), output);
+const fullDeserialization = (input, output, k, s) => {
+  let r = getDeserializerFn(s)(R.prop(k, input), R.prop('deserializeProp', s));
+  let deserializeProp = R.prop('deserializeProp', s);
+  return R.cond([
+    [validMultiple, () => assignValue(output, r, deserializeProp)],
+    [validSimple, () => assignValue(output, r, deserializeProp)],
     [
       R.T,
-      R.pipe(
-        validateSerializers,
-        R.cond([
-          [isTrue, () => proceedDeserialization({ input, serializers })],
-          [isFalse, R.always(undefined)],
-          [R.T, R.always(undefined)]
-        ])
-      )
+      () => {
+        throw new Error(invalidSerializerFn);
+      }
     ]
-  ])(serializers);
-  return r as any;
+  ])(r, deserializeProp);
 };
+const hasDeserializeProp = R.has('deserializeProp');
+const hasSerializerFn = R.has('serializerFn');
+const hasBoth = <S, D>(serializer: SerializerInfo<S, D>) =>
+  R.and(hasSerializerFn(serializer), hasDeserializeProp(serializer));
 
-// export const deserialize = <S, D>(input: S, serializers?: SerializerInfo<S, D>[]): D => {
-//   let output: D = {} as any;
-//   if (!serializers || serializers.length == 0) return (output = { ...input } as any);
-//   validateSerializers(serializers) &&
-//     Object.keys(input).forEach(k => {
-//       let s = serializers && serializers.find(s => s.serializeProp == k);
-//       if (s) {
-//         let result;
-//         if (s.serializerFn && s.serializerFn.deserialize)
-//           result = s.serializerFn.deserialize(
-//             input[k],
-//             is(Array, s.deserializeProp) && (s.deserializeProp as string[])
-//           );
-//         const prop = s.deserializeProp || k;
-//         if (typeof prop === 'string') output[prop] = result || input[k];
-//         else {
-//           if (!isNil(result) && result instanceof Object === false) throw new Error(invalidSerializerFn);
-//           prop.forEach(p => (output[p] = result ? result[p] : input[k]));
-//         }
-//       } else output[k] = input[k];
-//     });
-//   return output;
-// };
+const performDeserialization = <S, D>(input: S, output: D, k: keyof S) => (serializer: SerializerInfo<S, D>) =>
+  R.cond([
+    [hasBoth, () => fullDeserialization(input, output, k, serializer)],
+    [hasDeserializeProp, () => assignInputToOutput(input, output, k, R.prop('deserializeProp', serializer))],
+    [hasSerializerFn, () => executeDeserializerFn(input, output, k, serializer)],
+    [R.T, R.always(input)]
+  ])(serializer);
+
+const proceedDeserialization = <S, D>(input: S, serializers: SerializerInfo<S, D>[]): D =>
+  R.reduce(
+    (output: D, k: keyof S) =>
+      R.pipe(
+        findSerializer(serializers),
+        R.ifElse(R.isNil, R.always(moveInputProperty(input, output, k)), performDeserialization(input, output, k))
+      )(k as string),
+    {} as D,
+    R.keys(input) as (keyof S)[]
+  );
+
+const deserializeInput = <S, D>(input: S) => (serializers: SerializerInfo<S, D>[]): D =>
+  R.pipe(
+    validateSerializers,
+    R.cond([
+      [isTrue, () => proceedDeserialization(input, serializers)],
+      [isFalse, R.always(undefined)],
+      [R.T, R.always(undefined)]
+    ])
+  )(serializers);
+
+export const deserialize = <S, D>(input: S, serializers?: SerializerInfo<S, D>[]): D =>
+  R.cond([[isInitial, R.always(input)], [R.T, deserializeInput(input)]])(serializers);
