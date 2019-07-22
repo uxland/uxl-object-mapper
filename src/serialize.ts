@@ -131,13 +131,16 @@ const serializeInputProperty = <S, D>(input: D, output: S, k: keyof D, serialize
   ])(deserializeProp);
 };
 
-const fullSerialization = (input, output, k, s) => {
+const fullSerialization = <S, D>(input: D, output: S, k: keyof D, s: SerializerInfo<S, D>): S => {
   let result = R.cond([
     [
       isArray,
       () =>
         getSerializerFn(s)(
-          R.reduce((data, k: string) => R.set(R.lensProp(k), R.prop(k, input), data), {}, R.prop('deserializeProp', s)),
+          R.reduce((data, k: keyof D) => R.set(R.lensProp(k), R.prop(k, input), data), {}, R.prop(
+            'deserializeProp',
+            s
+          ) as (keyof D)[]),
           R.prop('deserializeProp', s)
         )
     ],
@@ -146,7 +149,7 @@ const fullSerialization = (input, output, k, s) => {
   return R.set(R.lensProp(R.prop('serializeProp', s)), result, output);
 };
 
-const performSerialization = <S, D>(input: any, output: any, k: any) => (serializer: SerializerInfo<S, D>) =>
+const performSerialization = <S, D>(input: D, output: S, k: keyof D) => (serializer: SerializerInfo<S, D>) =>
   R.cond([
     [hasBoth, () => fullSerialization(input, output, k, serializer)],
     [hasDeserializeProp, () => serializeInputProperty(input, output, k, serializer)],
