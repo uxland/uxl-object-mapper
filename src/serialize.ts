@@ -26,6 +26,7 @@ const hasSerializerFn = R.has('serializerFn');
 const hasBoth = <S, D>(serializer: SerializerInfo<S, D>) =>
   R.and(hasSerializerFn(serializer), hasDeserializeProp(serializer));
 
+/* VALIDATION */
 export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
   serializers.forEach(s => {
     if (!s.serializeProp) throw new Error(invalidSerializeProp);
@@ -33,6 +34,7 @@ export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): 
   return true;
 };
 
+/* DESERIALIZE */
 const findDeserializer = <S, D>(serializers: SerializerInfo<S, D>[]) => (key: string) =>
   R.find(R.propEq('serializeProp', key))(serializers);
 const deserializeInputProperty = <S, D>(input: S, output: D, originKey: keyof S, destKey: string[] | string) =>
@@ -105,6 +107,7 @@ const deserializeInput = <S, D>(input: S) => (serializers: SerializerInfo<S, D>[
 export const deserialize = <S, D>(input: S, serializers?: SerializerInfo<S, D>[]): D =>
   R.cond([[isInitial, R.always(input)], [R.T, deserializeInput(input)]])(serializers);
 
+/* SERIALIZE */
 const getSerializerFn: Function = R.path(['serializerFn', 'serialize']);
 const executeSerializerFn = <S, D>(input: D, output: S, k: string & keyof D, s: SerializerInfo<S, D>) =>
   R.set(R.lensProp(k), getSerializerFn(s)(R.prop(k, input)), output);
