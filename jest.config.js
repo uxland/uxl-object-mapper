@@ -8,5 +8,7 @@ module.exports = {
     '^.+/node_modules/.*?/es/.*?/*?.js$': 'ts-jest',
     '^.+\\.ts$': 'ts-jest',
     '^.+.ts$': 'ts-jest'
-  }
+  },
+  coverageReporters: ['json-summary', 'text', 'lcov'],
+  collectCoverage: true
 };

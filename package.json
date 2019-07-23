@@ -40,8 +40,6 @@
     "build:cjs": "tsc -p tsconfig.build.json --outDir lib --module commonjs --declaration",
     "build": "npm run build:es && npm run build:cjs",
     "dist": "npm run build",
-    "postbuild": "echo true > .buildstatus",
-    "prebuild": "echo false > .buildstatus",
     "readme:coverage": "node_modules/.bin/jest-badges-readme",
     "semantic-release": "semantic-release",
     "tdd": "jest --watch --collect-coverage",
@@ -61,7 +59,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run build && npm run test:unit && npm run readme:coverage && git add ."
+      "pre-commit": "npm run test:unit && npm run readme:coverage && git add ."
     }
   }
 }
