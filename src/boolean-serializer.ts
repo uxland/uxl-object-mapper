@@ -1,4 +1,4 @@
-import { Serializer } from './serialize';
+import { Serializer } from '.';
 
 export enum AbapBoolean {
   True = 'X',

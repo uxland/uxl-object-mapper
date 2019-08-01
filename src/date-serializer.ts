@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Serializer } from './serialize';
+import { Serializer } from '.';
 
 export interface SAPDate {
   date: string;

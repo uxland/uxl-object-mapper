@@ -1,14 +1,15 @@
-import { AbapBoolean, SAPBooleanSerializer } from '../../src/boolean-serializer';
-import { SAPDateSerializer } from '../../src/date-serializer';
 import {
-  deserialize,
   invalidSerializeProp,
   invalidSerializerFn,
+  invalidSerializerStructure,
   requiredSerializeFn,
   serialize,
-  SerializerInfo,
-  validateSerializers
-} from '../../src/serialize';
+  SerializerInfo
+} from '../../src';
+import { AbapBoolean, SAPBooleanSerializer } from '../../src/boolean-serializer';
+import { SAPDateSerializer } from '../../src/date-serializer';
+import { deserialize } from '../../src/deserialize';
+import { validateSerializers } from '../../src/validation';
 
 let date: Date, input: any, output: any, serializers: SerializerInfo<any, any>[];
 describe('Serializer', () => {
@@ -145,13 +146,23 @@ describe('Serializer', () => {
       });
     });
     describe('If serializers are defined', () => {
-      describe('If serializerFn and deserializeProp are not defined', () => {
+      describe('If only serializeProp is defined', () => {
         it('output must be equal to input', () => {
           const serializers: SerializerInfo<any, any>[] = [{ serializeProp: 'foo' }];
           expect(serialize(input, serializers)).toStrictEqual(input);
         });
       });
       describe('If serializerFn is defined and deserializeProp is not defined', () => {
+        it('if sub-serializers are defined, it must throw an error', () => {
+          const serializers: SerializerInfo<any, any>[] = [
+            {
+              serializeProp: 'foo',
+              serializerFn: { serialize: input => input.toUpperCase() },
+              serializers: [{ serializeProp: 'bar' }]
+            }
+          ];
+          expect(() => serialize(input, serializers)).toThrow(invalidSerializerStructure);
+        });
         it('output[deserializeProp] must be equal to serialize(input)', () => {
           const serializers: SerializerInfo<any, any>[] = [
             { serializeProp: 'boolean', serializerFn: SAPBooleanSerializer }
@@ -219,6 +230,35 @@ describe('Serializer', () => {
             (serializers[0].deserializeProp as string[]).forEach(p => delete output[p]);
             expect(serialize(input, serializers)).toStrictEqual(output);
           });
+        });
+      });
+      describe('If serializer has serializers', () => {
+        it('nested input object must be serialized with sub-serializers', () => {
+          const serializers: SerializerInfo<any, any>[] = [
+            {
+              serializeProp: 'foo',
+              serializers: [{ serializeProp: 'boolean', serializerFn: SAPBooleanSerializer }]
+            }
+          ];
+          const input = { foo: { boolean: AbapBoolean.True } };
+          const output = { foo: { boolean: SAPBooleanSerializer.serialize(input.foo.boolean) } };
+          expect(serialize(input, serializers)).toStrictEqual(output);
+        });
+        it('nested input object with arrays must be serialized with sub-serializers', () => {
+          const serializers: SerializerInfo<any, any>[] = [
+            {
+              serializeProp: 'foo',
+              serializers: [{ serializeProp: 'boolean', serializerFn: SAPBooleanSerializer }]
+            }
+          ];
+          const input = { foo: [{ boolean: AbapBoolean.True }, { boolean: AbapBoolean.False }] };
+          const output = {
+            foo: [
+              { boolean: SAPBooleanSerializer.serialize(input.foo[0].boolean) },
+              { boolean: SAPBooleanSerializer.serialize(input.foo[1].boolean) }
+            ]
+          };
+          expect(serialize(input, serializers)).toStrictEqual(output);
         });
       });
     });
