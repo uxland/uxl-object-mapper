@@ -1,15 +1,15 @@
-import { AbapBoolean, SAPBooleanSerializer } from '../../src/boolean-serializer';
-import { SAPDateSerializer } from '../../src/date-serializer';
 import {
-  deserialize,
   invalidSerializeProp,
   invalidSerializerFn,
   invalidSerializerStructure,
   requiredSerializeFn,
   serialize,
-  SerializerInfo,
-  validateSerializers
-} from '../../src/serialize';
+  SerializerInfo
+} from '../../src';
+import { AbapBoolean, SAPBooleanSerializer } from '../../src/boolean-serializer';
+import { SAPDateSerializer } from '../../src/date-serializer';
+import { deserialize } from '../../src/deserialize';
+import { validateSerializers } from '../../src/validation';
 
 let date: Date, input: any, output: any, serializers: SerializerInfo<any, any>[];
 describe('Serializer', () => {
