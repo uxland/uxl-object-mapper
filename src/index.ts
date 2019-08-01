@@ -28,4 +28,6 @@ export const isArray = R.is(Array);
 
 export * from './boolean-serializer';
 export * from './date-serializer';
+export * from './deserialize';
 export * from './serialize';
+export * from './validation';
