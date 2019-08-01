@@ -3,7 +3,8 @@ import * as R from 'ramda';
 export interface SerializerInfo<S, D> {
   serializeProp: string;
   deserializeProp?: string | string[];
-  serializerFn?: Serializer<any, any>;
+  serializerFn?: Serializer<S, D>;
+  serializers?: SerializerInfo<S, D>[];
 }
 export interface Serializer<S, D> {
   serialize?: (input: D, fields?: string[]) => S;
@@ -13,6 +14,7 @@ export interface Serializer<S, D> {
 export const invalidSerializerFn = 'invalid-serializer-fn';
 export const invalidSerializeProp = 'invalid-serialize-prop';
 export const requiredSerializeFn = 'required-serializer-fn';
+export const invalidSerializerStructure = 'invalid-serializer-structure';
 
 const isTrue = R.equals(true);
 const isFalse = R.equals(false);
@@ -23,6 +25,7 @@ const validMultiple = (result: any, keys: string[]) => R.and(isObject(result), i
 const validSimple = (result: any, keys: string) => R.not(isArray(keys));
 const hasDeserializeProp = R.has('deserializeProp');
 const hasSerializerFn = R.has('serializerFn');
+const hasSerializers = R.has('serializers');
 const hasBoth = <S, D>(serializer: SerializerInfo<S, D>) =>
   R.and(hasSerializerFn(serializer), hasDeserializeProp(serializer));
 
@@ -30,6 +33,7 @@ const hasBoth = <S, D>(serializer: SerializerInfo<S, D>) =>
 export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
   serializers.forEach(s => {
     if (!s.serializeProp) throw new Error(invalidSerializeProp);
+    if (s.serializerFn && s.serializers) throw new Error(invalidSerializerStructure);
   });
   return true;
 };
@@ -158,6 +162,15 @@ const performSerialization = <S, D>(input: D, output: S, k: string & keyof D) =>
     [hasBoth, () => fullSerialization(input, output, k, serializer)],
     [hasDeserializeProp, () => serializeInputProperty(input, output, k, serializer)],
     [hasSerializerFn, () => executeSerializerFn(input, output, k, serializer)],
+    [
+      hasSerializers,
+      () =>
+        R.set(
+          R.lensProp(k),
+          serialize(R.prop(k, input), R.prop('serializers', serializer) as SerializerInfo<S, any>[]),
+          output
+        )
+    ],
     [R.T, R.always(input)]
   ])(serializer);
 
@@ -174,7 +187,7 @@ const findSerializer = <S, D>(serializers: SerializerInfo<S, D>[]) => (key: stri
   return R.prop(key, serializerDictionary);
 };
 
-const proceedSerialization = <S, D>(input: D, serializers: SerializerInfo<S, D>[]): S =>
+const reduceInput = <S, D>(input: D, serializers: SerializerInfo<S, D>[]) =>
   R.reduce(
     (output: S, k: string & keyof D) =>
       R.pipe(
@@ -188,6 +201,13 @@ const proceedSerialization = <S, D>(input: D, serializers: SerializerInfo<S, D>[
     {} as S,
     R.keys(input) as (keyof D)[]
   );
+
+const proceedSerialization = <S, D>(input: D, serializers: SerializerInfo<S, D>[]): S =>
+  R.ifElse(
+    isArray,
+    () => R.reduce((acc, item: any) => acc.concat(reduceInput(item, serializers)), [], input as any),
+    R.always(reduceInput(input, serializers))
+  )(input);
 
 const serializeInput = <S, D>(input: D) => (serializers: SerializerInfo<S, D>[]): S =>
   R.pipe(
