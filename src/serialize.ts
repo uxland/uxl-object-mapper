@@ -1,188 +1,152 @@
 import * as R from 'ramda';
-import {
-  hasInvalidSerializerFn,
-  hasInvalidStructure,
-  hasSerializerFn,
-  hasSerializers,
-  invalidSerializerFn,
-  invalidSerializerStructure,
-  isArray,
-  isInitial,
-  SerializerInfo
-} from '.';
-import { validateSerializers } from './validation';
+import { isArray, isInitial, isObject, notInitial } from '.';
+import { SerializerInfo } from './model';
+import { invalidPath, invalidSerializers } from './validation';
 
 const thrower = (message: string) => {
   throw new Error(message);
 };
+const getFrom = R.prop('from');
+const getTo = R.prop('to');
+const getFn = R.prop('serializerFn');
+const getSerializers = R.prop('serializers');
+const hasFrom = R.pipe(
+  getFrom,
+  notInitial
+);
+const hasTo = R.pipe(
+  getTo,
+  notInitial
+);
+const hasFn = R.pipe(
+  getFn,
+  notInitial
+);
+const hasSerializers = R.pipe(getSerializers);
+const hasFromTo = R.allPass([hasFrom, hasTo]);
+const isPath = R.pipe(
+  R.indexOf('.'),
+  R.complement(R.equals(-1))
+);
+const isSingleObject = R.allPass([
+  isArray,
+  R.pipe(
+    R.length,
+    R.equals(1)
+  )
+]);
+const buildFirstIndexPath = R.pipe(
+  R.split('.'),
+  (paths: string[]) => [paths[0], 0, ...R.remove(0, 1, paths)]
+);
+const getProp = (from: string, data: any) =>
+  R.ifElse(
+    isPath,
+    () =>
+      R.cond([
+        [isObject, R.always(R.path(R.split('.', from), data))],
+        [isSingleObject, R.always(R.path(buildFirstIndexPath(from), data))],
+        [R.T, () => thrower(invalidPath)]
+      ])(R.prop(R.split('.', from)[0], data)),
+    R.always(R.prop(from, data))
+  )(from);
+const lensProp = (prop: string) => R.ifElse(isPath, () => R.lensPath(R.split('.')(prop)), () => R.lensProp(prop))(prop);
+const setOutput = (from, to, value) => R.set(lensProp(to || from), value || undefined);
+const multipleTo = (data: any, from: string, to: string[]) =>
+  R.reduce((collection, toK: string) => inToOut(data, from, toK)(collection), {}, to);
+const executeFn = (data: any, fn: Function) =>
+  R.ifElse(isArray, () => R.reduce((collection: any[], d) => collection.concat(fn(d)), [], data), () => fn(data))(data);
+const assignInputToOutput = (data: any, from: string, to?: string, serializerFn?: Function, serializers?: any[]) => (
+  output: any
+) =>
+  R.cond([
+    [hasFn, () => setOutput(from, to, executeFn(data, serializerFn))(output)],
+    [hasSerializers, () => setOutput(from, to, serialize(data, serializers))(output)],
+    [R.T, () => setOutput(from, to, data)(output)]
+  ])({
+    serializerFn,
+    serializers
+  });
+export const inToOut = (data: any, from: string, to?: string | string[], fn?: Function, serializers?: any) => (
+  output: any
+) =>
+  R.cond([
+    [
+      hasFromTo,
+      () =>
+        R.cond([
+          [isArray, () => multipleTo(data, from, to as string[])],
+          [R.T, R.always(assignInputToOutput(getProp(from, data), from, to as string, fn, serializers)(output))]
+        ])(to)
+    ],
+    [R.T, R.always(assignInputToOutput(getProp(from, data), from, undefined, fn, serializers)(output))]
+  ])({
+    from,
+    to
+  });
 
-const validSerializers = <S, L>(serializers: SerializerInfo<S, L>[]): boolean => validateSerializers<S, L>(serializers);
-const invalidSerializers = <S, L>(serializers: SerializerInfo<S, L>[]): boolean => !validSerializers(serializers);
-const findSerializer = <S, L>(serializers: SerializerInfo<S, L>[], property: string) =>
-  serializers.find(s => s.serializeProp == property);
-const getSerializerFn: Function = R.path(['serializerFn', 'serialize']);
-const getDeserializeProp = <S, L>(serializer: SerializerInfo<S, L>, key: string & keyof S) =>
-  (R.prop('deserializeProp', serializer) as string & keyof S) || key;
-const recursiveSerialize = <S, L>(input: S, key: string & keyof S, serializers: SerializerInfo<S, L>) =>
-  serialize(R.prop(key, input) as any, R.prop('serializers', serializers) as SerializerInfo<S, L>[]);
-const performSerialization = <S, L>(input: S, serializers: SerializerInfo<S, L>[]) =>
-  R.reduce(
-    (output, k: string & keyof S) =>
-      R.pipe(
-        findSerializer,
-        (s: SerializerInfo<S, L>) => ({
-          s,
-          value: R.cond([
-            [isInitial, R.always(R.prop(k, input))],
-            [hasInvalidStructure, () => thrower(invalidSerializerStructure)],
-            [hasInvalidSerializerFn, () => thrower(invalidSerializerFn)],
-            [hasSerializerFn, () => getSerializerFn(s)(R.prop(k, input))],
-            [hasSerializers, () => recursiveSerialize(input, k, s)],
-            [R.T, R.always(R.prop(k, input))]
-          ])(s)
-        }),
-        (i: { s: SerializerInfo<S, L>; value: any }) => R.set(R.lensProp(getDeserializeProp(i.s, k)), i.value, output)
-      )(serializers, k),
-    {},
-    R.keys(input)
+const serializeArray = <I, O>(i: I[], serializers: SerializerInfo<I, O>[]): O[] =>
+  R.reduce<I, O[]>((collection, d) => collection.concat(serialize(d, serializers)), [], i as I[]);
+const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
+  R.reduce<SerializerInfo<I, O>, O>(
+    (o, s) => inToOut(i, getFrom(s) as string, getTo(s as any), getFn(s as any), getSerializers(s as any))(o),
+    {} as O,
+    serializers
   );
 
-const serializeInput = <S, L>(input: S, serializers: SerializerInfo<S, L>[]) =>
-  R.ifElse(
-    isArray,
-    () => R.reduce((acc, item) => acc.concat(performSerialization(item, serializers)), [], input as any),
-    () => performSerialization<S, L>(input, serializers)
-  )(input);
-export const serialize = <S, L>(input: S, serializers?: SerializerInfo<S, L>[]): L =>
+export const serialize = <I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O =>
   R.cond([
-    [isInitial, R.always(input)],
-    [invalidSerializers, R.always(undefined)],
-    [R.T, () => serializeInput(input, serializers)]
+    [isInitial, R.always(i)],
+    [invalidSerializers, R.always(i)],
+    [
+      R.T,
+      () => R.ifElse(isArray, () => serializeArray(i as I[], serializers), () => serializeObject(i, serializers))(i)
+    ]
   ])(serializers);
 
-// import {
-//   hasDeserializeProp,
-//   hasDeserializePropAndSerializerFn,
-//   hasSerializerFn,
-//   hasSerializers,
-//   isArray,
-//   isFalse,
-//   isInitial,
-//   isTrue,
-//   requiredSerializeFn,
-//   SerializerInfo
-// } from '.';
-// import { validateSerializers } from './validation';
+//
 
-// const moveInputProperty = <S, D>(input: S, output: D, originKey: keyof S, destKey?: string): D =>
-//   R.set(R.lensProp((destKey || originKey) as string), R.prop(originKey, input), output);
-// const getSerializerFn: Function = R.path(['serializerFn', 'serialize']);
-// const executeSerializerFn = <S, D>(input: D, output: S, k: string & keyof D, s: SerializerInfo<S, D>) =>
-//   R.set(R.lensProp(k), getSerializerFn(s)(R.prop(k, input)), output);
-// const serializeInputProperty = <S, D>(input: D, output: S, k: keyof D, serializer: SerializerInfo<S, D>): S => {
-//   let deserializeProp = R.prop('deserializeProp', serializer);
-//   let serializeProp = R.prop('serializeProp', serializer);
-//   let serializerFn = getSerializerFn(serializer);
-//   let values = R.reduce(
-//     (values, key: keyof D) => values.concat(R.prop(key, input)),
-//     [],
-//     deserializeProp as (keyof D)[]
-//   );
-//   return R.cond([
-//     [
-//       R.allPass([isArray, () => R.isNil(serializerFn), () => R.equals(R.length(R.uniq(values)), 1)]),
-//       R.always(R.set(R.lensProp(serializeProp), R.prop(k, input), output))
-//     ],
-//     [
-//       R.allPass([isArray, () => R.isNil(serializerFn), () => R.gt(R.length(R.uniq(values)), 1)]),
-//       () => {
-//         throw new Error(requiredSerializeFn);
-//       }
-//     ],
-//     [R.T, R.always(R.set(R.lensProp(serializeProp), R.prop(k, input), output))]
-//   ])(deserializeProp);
+// const thrower = (message: string) => {
+//   throw new Error(message);
 // };
-
-// const fullSerialization = <S, D>(input: D, output: S, k: string & keyof D, s: SerializerInfo<S, D>): S => {
-//   let result = R.cond([
-//     [
-//       isArray,
-//       () =>
-//         getSerializerFn(s)(
-//           R.reduce((data, k: string & keyof D) => R.set(R.lensProp(k), R.prop(k, input), data), {}, R.prop(
-//             'deserializeProp',
-//             s
-//           ) as (keyof D)[]),
-//           R.prop('deserializeProp', s)
-//         )
-//     ],
-//     [R.T, () => getSerializerFn(s)(R.prop(k, input), R.prop('deserializeProp', s))]
-//   ])(R.prop('deserializeProp', s));
-//   return R.set(R.lensProp(R.prop('serializeProp', s)), result, output);
-// };
-
-// // TODO: refactor this
-// const performSerialization = <S, D>(input: D, output: S, k: string & keyof D) => (serializer: SerializerInfo<S, D>) =>
-//   R.cond([
-//     [
-//       hasSerializers,
-//       () =>
-//         R.set(
-//           R.lensProp((R.prop('deserializeProp', serializer) as string) || k),
-//           serialize(R.prop(k, input), R.prop('serializers', serializer) as SerializerInfo<S, any>[]),
-//           output
-//         )
-//     ],
-//     [hasDeserializePropAndSerializerFn, () => fullSerialization(input, output, k, serializer)],
-//     [hasDeserializeProp, () => serializeInputProperty(input, output, k, serializer)],
-//     [hasSerializerFn, () => executeSerializerFn(input, output, k, serializer)],
-//     [R.T, R.always(input)]
-//   ])(serializer);
-
-// const findSerializer = <S, D>(serializers: SerializerInfo<S, D>[]) => (key: string) => {
-//   const serializerDictionary: { [key: string]: SerializerInfo<S, D> } = R.reduce(
-//     (collection, s) => {
-//       if (!R.is(Array, s.deserializeProp)) collection[(s.deserializeProp as string) || s.serializeProp] = s;
-//       else (s.deserializeProp as string[]).forEach(p => (collection[p] = s));
-//       return collection;
-//     },
-//     {},
-//     serializers
-//   );
-//   return R.prop(key, serializerDictionary);
-// };
-
-// const reduceInput = <S, D>(input: D, serializers: SerializerInfo<S, D>[]) =>
+// const findSerializer = <S, L>(serializers: SerializerInfo<S, L>[], property: string) =>
+//   serializers.find(s => s.serializeProp == property);
+// const getSerializerFn: Function = R.prop('serializerFn');
+// const getDeserializeProp = <S, L>(serializer: SerializerInfo<S, L>, key: string & keyof S) =>
+//   (R.prop('deserializeProp', serializer) as string & keyof S) || key;
+// const recursiveSerialize = <S, L>(input: S, key: string & keyof S, serializers: SerializerInfo<S, L>) =>
+//   serialize(R.prop(key, input) as any, R.prop('serializers', serializers) as SerializerInfo<S, L>[]);
+// const performSerialization = <S, L>(input: S, serializers: SerializerInfo<S, L>[]) =>
 //   R.reduce(
-//     (output: S, k: string & keyof D) =>
+//     (output, k: string & keyof S) =>
 //       R.pipe(
-//         findSerializer(serializers),
-//         R.ifElse(
-//           R.isNil,
-//           R.always(moveInputProperty<D, S>(input, output, k)),
-//           performSerialization(input, output as any, k)
-//         )
-//       )(k as string),
-//     {} as S,
-//     R.keys(input) as (keyof D)[]
+//         findSerializer,
+//         (s: SerializerInfo<S, L>) => ({
+//           s,
+//           value: R.cond([
+//             [isInitial, R.always(R.prop(k, input))],
+//             [hasInvalidStructure, () => thrower(invalidSerializerStructure)],
+//             [hasInvalidSerializerFn, () => thrower(invalidSerializerFn)],
+//             [hasSerializerFn, () => getSerializerFn(s)(R.prop(k, input))],
+//             [hasSerializers, () => recursiveSerialize(input, k, s)],
+//             [R.T, R.always(R.prop(k, input))]
+//           ])(s)
+//         }),
+//         (i: { s: SerializerInfo<S, L>; value: any }) => R.set(R.lensProp(getDeserializeProp(i.s, k)), i.value, output)
+//       )(serializers, k),
+//     {},
+//     R.keys(input)
 //   );
 
-// const proceedSerialization = <S, D>(input: D, serializers: SerializerInfo<S, D>[]): S =>
+// const serializeInput = <S, L>(input: S, serializers: SerializerInfo<S, L>[]) =>
 //   R.ifElse(
 //     isArray,
-//     () => R.reduce((acc, item: any) => acc.concat(reduceInput(item, serializers)), [], input as any),
-//     R.always(reduceInput(input, serializers))
+//     () => R.reduce((acc, item) => acc.concat(performSerialization(item, serializers)), [], input as any),
+//     () => performSerialization<S, L>(input, serializers)
 //   )(input);
-
-// const serializeInput = <S, D>(input: D) => (serializers: SerializerInfo<S, D>[]): S =>
-//   R.pipe(
-//     validateSerializers,
-//     R.cond([
-//       [isTrue, () => proceedSerialization(input, serializers)],
-//       [isFalse, R.always(undefined)],
-//       [R.T, R.always(undefined)]
-//     ])
-//   )(serializers);
-
-// export const serialize = <S, D>(input: D, serializers?: SerializerInfo<S, D>[]): S =>
-//   R.cond([[isInitial, R.always(input)], [R.T, serializeInput(input)]])(serializers);
+// export const serialize = <S, L>(input: S, serializers?: SerializerInfo<S, L>[]): L =>
+//   R.cond([
+//     [isInitial, R.always(input)],
+//     [invalidSerializers, R.always(undefined)],
+//     [R.T, () => serializeInput(input, serializers)]
+//   ])(serializers);

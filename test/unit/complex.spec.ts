@@ -1,104 +1,190 @@
-import { Chance } from 'chance';
-import { format } from 'date-fns';
-import { serialize, SerializerInfo } from '../../src';
+import * as R from 'ramda';
+import { SerializerInfo } from '../../src';
+import { serialize } from '../../src/serialize';
+import ETQ from './etq.example';
+import { IPatientIQ, ISAPIQEventGroup, ISAPPatientIQ } from './models';
+import SAP from './sap.example';
 
-const chance = new Chance();
-
-describe('Complex testing', () => {
-  it('test', () => {
-    const input = mockPatientIQ();
-    const DateSerializer = {
-      serialize: (stringDate: string) => new Date(stringDate)
-    };
-    const cellSerializers = [
+let ownerSerializers;
+describe('SAP - ETQ Mapper', () => {
+  beforeAll(() => {
+    ownerSerializers = [{ from: 'ID', to: 'id' }, { from: 'NAME', to: 'name' }, { from: 'SURNAME', to: 'surname' }];
+  });
+  it('serialize Events', () => {
+    const serializers: SerializerInfo<ISAPPatientIQ, IPatientIQ>[] = [
       {
-        serializeProp: 'TIMESTAMP',
-        deserializeProp: 'timestamp',
-        serializerFn: DateSerializer
-      },
-      { serializeProp: 'COMMENT', deserializeProp: 'comment' },
-      {
-        serializeProp: 'OWNER',
-        deserializeProp: 'owner',
+        from: 'EVENTS',
+        to: 'events',
         serializers: [
-          { serializeProp: 'ID', deserializeProp: 'id' },
-          { serializeProp: 'NAME', deserializeProp: 'name' },
-          { serializeProp: 'SURNAME', deserializeProp: 'surname' }
+          {
+            from: 'CODE',
+            to: ['id', 'value']
+          },
+          { from: 'DESCRIPTION', to: 'description' },
+          { from: 'CELL.TIMESTAMP', to: 'timestamp' },
+          { from: 'CELL.OWNER', to: 'owner', serializers: ownerSerializers },
+          { from: 'CELL.COMMENT', to: 'comment' }
         ]
-      },
-      { serializeProp: 'INIT', deserializeProp: 'init', serializerFn: DateSerializer },
-      { serializeProp: 'END', deserializeProp: 'end', serializerFn: DateSerializer },
-      { serializeProp: 'VALUE', deserializeProp: 'value' },
-      { serializeProp: 'UNIT', deserializeProp: 'unit' },
-      { serializeProp: 'ABNORMALITY', deserializeProp: 'abnormality' }
-    ];
-    const itemSerializers = [
-      { serializeProp: 'CODE', deserializeProp: 'code' },
-      { serializeProp: 'DESCRIPTION', deserializeProp: 'description' },
-      {
-        serializeProp: 'CELL',
-        deserializeProp: 'cell',
-        serializers: cellSerializers
       }
+    ];
+    expect(serialize({ EVENTS: SAP.EVENTS }, serializers)).toStrictEqual({ events: ETQ.events });
+  });
+  it('serialize Techniques', () => {
+    const cellSerializers: any = [
+      { from: 'TIMESTAMP', to: 'timestamp' },
+      { from: 'COMMENT', to: 'comment' },
+      { from: 'OWNER', to: 'owner', serializers: ownerSerializers }
+    ];
+    const techniqueSerializers: any = [
+      { from: 'CODE', to: ['id', 'value'] },
+      { from: 'DESCRIPTION', to: 'description' }
     ];
     const serializers: SerializerInfo<any, any>[] = [
       {
-        serializeProp: 'EVENTS',
-        deserializeProp: 'events',
-        serializers: itemSerializers
-      },
-      {
-        serializeProp: 'TECHNIQUES',
-        deserializeProp: 'techniques',
-        serializers: itemSerializers
-      },
-      {
-        serializeProp: 'PARAMETERS',
-        deserializeProp: 'parameters',
-        serializers: itemSerializers
+        from: 'TECHNIQUES',
+        to: 'techniques',
+        serializerFn: (technique: ISAPIQEventGroup) =>
+          R.reduce(
+            (collection, cell) =>
+              collection.concat({
+                ...serialize(technique, techniqueSerializers),
+                ...serialize(cell, cellSerializers)
+              }),
+            [],
+            R.prop('CELL', technique)
+          )
       }
     ];
-    let r = serialize(input, serializers);
-    console.log(r);
+    expect(serialize({ TECHNIQUES: SAP.TECHNIQUES }, serializers)).toStrictEqual({ techniques: ETQ.techniques });
   });
-});
-
-const date = new Date();
-const buildPatientIQCell = () => ({
-  TIMESTAMP: `${format(date, 'yyyy-MM-dd')}T${format(date, 'HH:mm:ss')}`,
-  COMMENT: chance.sentence(),
-  OWNER: {
-    ID: 'NABIO',
-    NAME: 'Sol.licitant',
-    SURNAME: 'Sol.licitant'
-  },
-  INIT: `${format(date, 'yyyy-MM-dd')}T${format(date, 'HH:mm:ss')}`,
-  END: `${format(date, 'yyyy-MM-dd')}T${format(date, 'HH:mm:ss')}`,
-  VALUE: '',
-  UNIT: '',
-  ABNORMALITY: ''
-});
-
-const buildPatientIQCells = () => buildArray(buildPatientIQCell);
-
-const buildPatientIQItem = () => ({
-  CODE: chance.guid(),
-  DESCRIPTION: chance.sentence(),
-  CELL: buildPatientIQCells()
-});
-
-const buildArray = (fn: any) => {
-  let items: any[] = [];
-  for (let i = 0; i < Math.random() * Math.floor(5); i++) {
-    items.push(fn());
-  }
-  return items;
-};
-
-const buildPatientIQItems = () => buildArray(buildPatientIQItem);
-
-const mockPatientIQ = () => ({
-  EVENTS: buildPatientIQItems(),
-  TECHNIQUES: buildPatientIQItems(),
-  PARAMETERS: buildPatientIQItems()
+  it('serialize Parameters', () => {
+    const serializers: SerializerInfo<ISAPPatientIQ, IPatientIQ>[] = [
+      {
+        from: 'PARAMETERS',
+        to: 'parameters',
+        serializers: [
+          { from: 'CODE', to: 'id' },
+          { from: 'DESCRIPTION', to: 'description' },
+          {
+            from: 'CELL',
+            to: 'items',
+            serializers: [
+              { from: 'TIMESTAMP', to: 'timestamp' },
+              { from: 'COMMENT', to: 'comment' },
+              { from: 'OWNER', to: 'owner', serializers: ownerSerializers },
+              { from: 'VALUE', to: 'value', serializerFn: (input: string) => parseFloat(input) } as any,
+              { from: 'UNIT', to: 'unit' },
+              { from: 'ABNORMALITY', to: 'abnormality' }
+            ]
+          }
+        ]
+      }
+    ];
+    expect(serialize({ PARAMETERS: SAP.PARAMETERS }, serializers)).toStrictEqual({ parameters: ETQ.parameters });
+  });
+  it('serialize Analytic', () => {
+    const serializers: SerializerInfo<ISAPPatientIQ, IPatientIQ>[] = [
+      {
+        from: 'ANALYTIC',
+        to: 'analytic',
+        serializers: [
+          { from: 'CODE', to: 'id' },
+          { from: 'DESCRIPTION', to: 'description' },
+          {
+            from: 'CELL',
+            to: 'items',
+            serializers: [
+              { from: 'TIMESTAMP', to: 'timestamp' },
+              { from: 'COMMENT', to: 'comment' },
+              { from: 'OWNER', to: 'owner', serializers: ownerSerializers },
+              { from: 'VALUE', to: 'value', serializerFn: (input: string) => parseFloat(input) } as any,
+              { from: 'UNIT', to: 'unit' },
+              { from: 'ABNORMALITY', to: 'abnormality' }
+            ]
+          }
+        ]
+      }
+    ];
+    expect(serialize({ ANALYTIC: SAP.ANALYTIC }, serializers)).toStrictEqual({ analytic: ETQ.analytic });
+  });
+  it('serialize Airway', () => {
+    const cellSerializers: any = [
+      { from: 'INIT', to: 'init' },
+      { from: 'END', to: 'end' },
+      { from: 'COMMENT', to: 'comment' },
+      { from: 'OWNER', to: 'owner', serializers: ownerSerializers }
+    ];
+    const techniqueSerializers: any = [
+      { from: 'CODE', to: ['id', 'value'] },
+      { from: 'DESCRIPTION', to: 'description' }
+    ];
+    const serializers: SerializerInfo<any, any>[] = [
+      {
+        from: 'AIRWAY',
+        to: 'airway',
+        serializerFn: (technique: ISAPIQEventGroup) =>
+          R.reduce(
+            (collection, cell) =>
+              collection.concat({
+                ...serialize(technique, techniqueSerializers),
+                ...serialize(cell, cellSerializers)
+              }),
+            [],
+            R.prop('CELL', technique)
+          )
+      }
+    ];
+    expect(serialize({ AIRWAY: SAP.AIRWAY }, serializers)).toStrictEqual({ airway: ETQ.airway });
+  });
+  it('serialize Respiration', () => {
+    const serializers: SerializerInfo<ISAPPatientIQ, IPatientIQ>[] = [
+      {
+        from: 'RESPIRATION',
+        to: 'respiration',
+        serializers: [
+          { from: 'CODE', to: 'id' },
+          { from: 'DESCRIPTION', to: 'description' },
+          {
+            from: 'CELL',
+            to: 'items',
+            serializers: [
+              { from: 'TIMESTAMP', to: 'timestamp' },
+              { from: 'COMMENT', to: 'comment' },
+              { from: 'OWNER', to: 'owner', serializers: ownerSerializers },
+              { from: 'VALUE', to: 'value' },
+              { from: 'UNIT', to: 'unit' },
+              { from: 'ABNORMALITY', to: 'abnormality' }
+            ]
+          }
+        ]
+      }
+    ];
+    expect(serialize({ RESPIRATION: SAP.RESPIRATION }, serializers)).toStrictEqual({ respiration: ETQ.respiration });
+  });
+  it('serialize ArterialPathways', () => {
+    const serializers: SerializerInfo<ISAPPatientIQ, IPatientIQ>[] = [
+      {
+        from: 'ARTERIALPATHWAYS',
+        to: 'arterialPathways',
+        serializers: [
+          { from: 'CODE', to: 'id' },
+          { from: 'DESCRIPTION', to: 'description' },
+          {
+            from: 'CELL',
+            to: 'items',
+            serializers: [
+              { from: 'COMMENT', to: 'comment' },
+              { from: 'OWNER', to: 'owner', serializers: ownerSerializers },
+              { from: 'VALUE', to: 'value' },
+              { from: 'INIT', to: 'init' },
+              { from: 'END', to: 'end' }
+            ]
+          }
+        ]
+      }
+    ];
+    expect(serialize({ ARTERIALPATHWAYS: SAP.ARTERIALPATHWAYS }, serializers)).toStrictEqual({
+      arterialPathways: ETQ.arterialPathways
+    });
+  });
 });
