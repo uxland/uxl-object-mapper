@@ -53,4 +53,4 @@ export const parseTimestamp = R.pipe(
   R.join(' ')
 );
 
-export const SAPDateSerializer = (timestamp: string) => parse(parseTimestamp(timestamp), 'yyyyMMdd hhmmss', new Date());
+export const SAPDateSerializer = (timestamp: string) => parse(parseTimestamp(timestamp), 'yyyyMMdd HHmmss', new Date());
