@@ -1,25 +1,56 @@
-export interface SAPDate {
-  date: string;
-  time: string;
-}
-export enum AbapDateFormats {
-  Date = 'yyyy-MM-dd',
-  Time = 'HH:mm:ss'
+import { parse } from 'date-fns';
+import * as R from 'ramda';
+
+export const enum ValidationError {
+  InvalidDateFormat = 'Date must be in format yyyyMMdd.',
+  InvalidDateValue = 'Date must be a number',
+  InvalidTimeFormat = 'Time must be in format hhmmss, hhmm or hh.',
+  InvalidTimeValue = 'Time must be a number'
 }
 
-// const isTimestamp = R.pipe(
-//   R.indexOf('T'),
-//   R.equals(-1)
-// );
-// const dateSlashFormatted = R.pipe(R.split('/'), R.length(3));
-// const isValidDate = R.cond([]);
-// const isDateTimeObject = R.allPass([R.has('date'), R.has('time')]);
-// export const SAPDateSerializer = <I, O>(input: I & string): O => R.cond([[isTimestamp, () => new Date(input)]])(input);
-// export const SAPDateSerializer: Serializer<Date, SAPDate> = {
-//   serialize: (input: SAPDate, fields?: string[]): Date =>
-//     new Date(`${input[(fields && fields[0]) || 'date']} ${input[(fields && fields[1]) || 'time']}`),
-//   deserialize: (input: Date, fields?: string[]): SAPDate | any => ({
-//     [(fields && fields[0]) || 'date']: format(input, AbapDateFormats.Date),
-//     [(fields && fields[1]) || 'time']: format(input, AbapDateFormats.Time)
-//   })
-// };
+const thrower = msg => {
+  throw new Error(msg);
+};
+
+const isNumber = R.pipe(
+  parseInt,
+  R.complement(R.equals(NaN))
+);
+
+const hasTSeparator = R.pipe(
+  R.indexOf('T'),
+  R.equals(-1),
+  R.not
+);
+const splitTimestamp = timestamp =>
+  R.cond([[hasTSeparator, R.always(R.split('T', timestamp))], [R.T, R.always(R.split(' ', timestamp))]])(timestamp);
+const parseDate = (date: string) =>
+  R.pipe(
+    R.length,
+    R.cond([[R.equals(8), R.always(date)], [R.T, () => thrower(ValidationError.InvalidDateFormat)]])
+  )(date);
+const validateDate = R.cond([[isNumber, parseDate], [R.T, () => thrower(ValidationError.InvalidDateValue)]]);
+
+const parseTime = (time: string) =>
+  R.pipe(
+    R.length,
+    R.cond([
+      [R.equals(6), R.always(time)],
+      [R.equals(4), R.always(R.concat(time, '00'))],
+      [R.equals(2), R.always(R.concat(time, '0000'))],
+      [R.T, () => thrower(ValidationError.InvalidTimeFormat)]
+    ])
+  )(time);
+const validateTime = R.cond([[isNumber, parseTime], [R.T, () => thrower(ValidationError.InvalidTimeValue)]]);
+
+const validateTimestamp = R.pipe(
+  R.adjust(0, validateDate),
+  R.adjust(1, validateTime)
+);
+export const parseTimestamp = R.pipe(
+  splitTimestamp,
+  validateTimestamp,
+  R.join(' ')
+);
+
+export const SAPDateSerializer = (timestamp: string) => parse(parseTimestamp(timestamp), 'yyyyMMdd hhmmss', new Date());

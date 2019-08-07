@@ -26,7 +26,7 @@ export interface IIQRangeEvent extends IIQSingleEvent {
 }
 
 export interface IIQEventGroup<T> {
-  code: string;
+  id: string;
   description: string;
   items: T[];
 }
