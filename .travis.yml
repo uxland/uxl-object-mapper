@@ -2,6 +2,9 @@ language: node_js
 cache:
   directories:
     - ~/.npm
+branches:
+  except:
+    - /^v\d+\.\d+\.\d+$/
 dist: trusty
 sudo: required
 notifications:
@@ -19,6 +22,3 @@ jobs:
         skip_cleanup: true
         script:
           - npx semantic-release
-branches:
-  except:
-    - /^v\d+\.\d+\.\d+$/
