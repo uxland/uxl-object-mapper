@@ -7,15 +7,18 @@ sudo: required
 notifications:
   email: false
 node_js: 10
-script:
-  - npm run test:unit
-after_success:
-  - npm run dist
+jobs:
+  include:
+    - stage: test
+      script: npm run test:unit
+    - stage: build
+      script: npm run dist
+    - stage: deploy
+      deploy:
+        provider: script
+        skip_cleanup: true
+        script:
+          - npx semantic-release
 branches:
   except:
     - /^v\d+\.\d+\.\d+$/
-deploy:
-  provider: script
-  skip_cleanup: true
-  script:
-    - npx semantic-release
