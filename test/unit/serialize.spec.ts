@@ -1,6 +1,6 @@
 import { SerializerInfo } from '../../src/model';
 import { serialize } from '../../src/serialize';
-import { invalidPath, invalidSerializerStructure, requiredFrom } from '../../src/validation';
+import { invalidPath, invalidSerializerStructure, requiredFrom, requiredSerializeFn } from '../../src/validation';
 
 interface anySerializerInfo extends SerializerInfo<any, any> {}
 
@@ -53,7 +53,6 @@ describe('Serializer', () => {
         expect(serializerError).toThrow(invalidPath);
       });
     });
-
     it('if input[from] is an array, output[from] must be equal to input[from]', () => {
       const input = { foo: ['bar'] };
       const serializers: anySerializerInfo[] = [{ from: 'foo' }];
@@ -90,6 +89,27 @@ describe('Serializer', () => {
         const input = { foo: { bar: 'baz' } };
         const serializers: anySerializerInfo[] = [{ from: 'foo.bar', to: 'qux.quux' }];
         const output = { qux: { quux: 'baz' } };
+        expect(serialize(input, serializers)).toStrictEqual(output);
+      });
+    });
+    describe('and "from" is any array', () => {
+      it('if "to" is an array, input must be equal to output', () => {
+        const input = { date: '20190101', time: '100000' };
+        const serializers: anySerializerInfo[] = [{ from: ['date', 'time'], to: ['date', 'time'] }];
+        const output = { date: '20190101', time: '100000' };
+        expect(serialize(input, serializers)).toStrictEqual(output);
+      });
+      it('if "to" is a path or single property, it must have a serializerFn', () => {
+        const input = { date: '20190101', time: '100000' };
+        const serializers: anySerializerInfo[] = [{ from: ['date', 'time'], to: 'date' }];
+        const serializerError = () => serialize(input, serializers);
+        expect(serializerError).toThrow(requiredSerializeFn);
+      });
+      it('if "to" is a path or single property, must execute serializerFn using input[from]', () => {
+        const input = { date: '20190101', time: '100000' };
+        const serializerFn = (date, time) => `${date}T${time}`;
+        const serializers: anySerializerInfo[] = [{ from: ['date', 'time'], to: 'timestamp', serializerFn }];
+        const output = { timestamp: serializerFn(input.date, input.time) };
         expect(serialize(input, serializers)).toStrictEqual(output);
       });
     });

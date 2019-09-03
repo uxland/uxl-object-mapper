@@ -1,3 +1,4 @@
+import { isArray } from '.';
 import { SerializerInfo } from './model';
 
 export const invalidSerializerFn = 'invalid-serializer-fn';
@@ -9,6 +10,7 @@ export const invalidPath = 'Path can only be used for objects and single object 
 export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
   serializers.forEach(s => {
     if (!s.from) throw new Error(requiredFrom);
+    if (s.from && isArray(s.from) && !isArray(s.to) && !s.serializerFn) throw new Error(requiredSerializeFn);
     if (s.serializerFn && s.serializers) throw new Error(invalidSerializerStructure);
   });
   return true;

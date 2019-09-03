@@ -39,37 +39,58 @@ const buildFirstIndexPath = R.pipe(
   R.split('.'),
   (paths: string[]) => [paths[0], 0, ...R.remove(0, 1, paths)]
 );
-const getProp = (from: string, data: any) =>
-  R.ifElse(
-    isPath,
-    () =>
-      R.cond([
-        [isObject, R.always(R.path(R.split('.', from), data))],
-        [isSingleObject, R.always(R.path(buildFirstIndexPath(from), data))],
-        [R.T, () => thrower(invalidPath)]
-      ])(R.prop(R.split('.', from)[0], data)),
-    R.always(R.prop(from, data))
-  )(from);
-const lensProp = (prop: string) => R.ifElse(isPath, () => R.lensPath(R.split('.')(prop)), () => R.lensProp(prop))(prop);
-const setOutput = (from, to, value) => R.set(lensProp(to || from), value || undefined);
-const multipleTo = (data: any, from: string, to: string[]) =>
-  R.reduce((collection, toK: string) => inToOut(data, from, toK)(collection), {}, to);
-const executeFn = (data: any, fn: Function) =>
-  R.ifElse(isArray, () => R.reduce((collection: any[], d) => collection.concat(fn(d)), [], data), () => fn(data))(data);
-const assignInputToOutput = (data: any, from: string, to?: string, serializerFn?: Function, serializers?: any[]) => (
-  output: any
-) =>
+const getProp = (from: string | string[], data: any) =>
   R.cond([
-    [hasFn, () => setOutput(from, to, executeFn(data, serializerFn))(output)],
-    [hasSerializers, () => setOutput(from, to, serialize(data, serializers))(output)],
-    [R.T, () => setOutput(from, to, data)(output)]
+    [isArray, () => R.reduce((collection, fromK: string) => collection.concat(data[fromK]), [], from as string[])],
+    [
+      isPath,
+      () =>
+        R.cond([
+          [isObject, R.always(R.path(R.split('.', from as string), data))],
+          [isSingleObject, R.always(R.path(buildFirstIndexPath(from as string), data))],
+          [R.T, () => thrower(invalidPath)]
+        ])(R.prop(R.split('.', from as string)[0], data))
+    ],
+    [R.T, R.always(R.prop(from as string, data))]
+  ])(from);
+const lensProp = (prop: string) => R.ifElse(isPath, () => R.lensPath(R.split('.')(prop)), () => R.lensProp(prop))(prop);
+const setOutput = (from: string, to: string, value: any) => R.set(lensProp(to || from), value || undefined);
+const multipleTo = (data: any, from: string | string[], to: string[]) =>
+  R.cond([
+    [R.equals, () => R.reduce((collection, toK: string) => inToOut(data, toK, toK)(collection), {}, to)],
+    [R.T, () => R.reduce((collection, toK: string) => inToOut(data, from, toK)(collection), {}, to)]
+  ])(from, to);
+const executeFn = (data: any, from: string | string[], fn: Function) =>
+  R.ifElse(
+    isArray,
+    () => fn(...data),
+    () =>
+      R.ifElse(isArray, () => R.reduce((collection: any[], d) => collection.concat(fn(d)), [], data), () => fn(data))(
+        data
+      )
+  )(from);
+const assignInputToOutput = (
+  data: any,
+  from: string | string[],
+  to?: string,
+  serializerFn?: Function,
+  serializers?: any[]
+) => (output: any) =>
+  R.cond([
+    [hasFn, () => setOutput(from as string, to, executeFn(data, from, serializerFn))(output)],
+    [hasSerializers, () => setOutput(from as string, to, serialize(data, serializers))(output)],
+    [R.T, () => setOutput(from as string, to, data)(output)]
   ])({
     serializerFn,
     serializers
   });
-export const inToOut = (data: any, from: string, to?: string | string[], fn?: Function, serializers?: any) => (
-  output: any
-) =>
+export const inToOut = (
+  data: any,
+  from: string | string[],
+  to?: string | string[],
+  fn?: Function,
+  serializers?: any
+) => (output: any) =>
   R.cond([
     [
       hasFromTo,
@@ -89,7 +110,8 @@ const serializeArray = <I, O>(i: I[], serializers: SerializerInfo<I, O>[]): O[] 
   R.reduce<I, O[]>((collection, d) => collection.concat(serialize(d, serializers)), [], i as I[]);
 const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
   R.reduce<SerializerInfo<I, O>, O>(
-    (o, s) => inToOut(i, getFrom(s) as string, getTo(s as any), getFn(s as any), getSerializers(s as any))(o),
+    (o, s) =>
+      inToOut(i, getFrom(s) as string | string[], getTo(s as any), getFn(s as any), getSerializers(s as any))(o),
     {} as O,
     serializers
   );
