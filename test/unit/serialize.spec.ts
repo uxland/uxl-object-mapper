@@ -1,3 +1,4 @@
+import * as R from 'ramda';
 import { SerializerInfo } from '../../src/model';
 import { serialize } from '../../src/serialize';
 import { invalidPath, invalidSerializerStructure, requiredFrom, requiredSerializeFn } from '../../src/validation';
@@ -92,7 +93,7 @@ describe('Serializer', () => {
         expect(serialize(input, serializers)).toStrictEqual(output);
       });
     });
-    describe('and "from" is any array', () => {
+    describe('and "from" is any properties array', () => {
       it('if "to" is an array, input must be equal to output', () => {
         const input = { date: '20190101', time: '100000' };
         const serializers: anySerializerInfo[] = [{ from: ['date', 'time'], to: ['date', 'time'] }];
@@ -110,6 +111,15 @@ describe('Serializer', () => {
         const serializerFn = (date, time) => `${date}T${time}`;
         const serializers: anySerializerInfo[] = [{ from: ['date', 'time'], to: 'timestamp', serializerFn }];
         const output = { timestamp: serializerFn(input.date, input.time) };
+        expect(serialize(input, serializers)).toStrictEqual(output);
+      });
+      it('if "from" has a property that does not exists, it must not dump', () => {
+        const input: any = {};
+        const serializerFn = (date, time) => `${date}T${time}`;
+        const serializers: anySerializerInfo[] = [
+          { from: 'data', serializers: [{ from: ['date', 'time'], to: 'timestamp', serializerFn }] }
+        ];
+        const output = { data: { timestamp: serializerFn(R.prop('data.date')(input), R.prop('data.time')(input)) } };
         expect(serialize(input, serializers)).toStrictEqual(output);
       });
     });

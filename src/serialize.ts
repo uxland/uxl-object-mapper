@@ -41,7 +41,11 @@ const buildFirstIndexPath = R.pipe(
 );
 const getProp = (from: string | string[], data: any) =>
   R.cond([
-    [isArray, () => R.reduce((collection, fromK: string) => collection.concat(data[fromK]), [], from as string[])],
+    [
+      isArray,
+      () =>
+        R.reduce((collection, fromK: string) => collection.concat(data ? data[fromK] : undefined), [], from as string[])
+    ],
     [
       isPath,
       () =>
