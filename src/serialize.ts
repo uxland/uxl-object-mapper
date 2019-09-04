@@ -88,13 +88,9 @@ const assignInputToOutput = (
     serializerFn,
     serializers
   });
-export const inToOut = (
-  data: any,
-  from: string | string[],
-  to?: string | string[],
-  fn?: Function,
-  serializers?: any
-) => (output: any) =>
+const inToOut = (data: any, from: string | string[], to?: string | string[], fn?: Function, serializers?: any) => (
+  output: any
+) =>
   R.cond([
     [
       hasFromTo,
@@ -110,8 +106,8 @@ export const inToOut = (
     to
   });
 
-const serializeArray = <I, O>(i: I[], serializers: SerializerInfo<I, O>[]): O[] =>
-  R.reduce<I, O[]>((collection, d) => collection.concat(serialize(d, serializers)), [], i as I[]);
+const serializeArray = <I extends Array<I>, O>(i: I, serializers: SerializerInfo<I, O>[]): O[] =>
+  R.reduce<I, O[]>((collection, d) => collection.concat(serialize(d, serializers)), [], i);
 const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
   R.reduce<SerializerInfo<I, O>, O>(
     (o, s) => inToOut(i, getFrom(s) as string | string[], getTo(s), getFn(s as any), getSerializers(s as any))(o),
@@ -119,13 +115,17 @@ const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
     serializers
   );
 
-export const serialize = <I, O, S, T>(i: I | I[], serializers?: SerializerInfo<I, O, S, T>[]): O =>
+export const serialize = <I, O, S = any, T = any>(
+  i: I,
+  serializers?: SerializerInfo<I, O, S, T>[],
+  invert: boolean = false
+): O =>
   R.cond([
     [isInitial, R.always(i)],
     [invalidSerializers, R.always(i)],
     [
       R.T,
       () =>
-        R.ifElse(isArray, () => serializeArray(i as I[], serializers), () => serializeObject(i as I, serializers))(i)
+        R.ifElse(isArray, () => serializeArray<any, O>(i, serializers), () => serializeObject(i as I, serializers))(i)
     ]
   ])(serializers);
