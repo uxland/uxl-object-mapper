@@ -71,14 +71,4 @@ describe('Date serializer', () => {
       expect(SAPDateSerializer(timestamp)).toStrictEqual(parse(timestamp, 'yyyyMMdd HHmmss', new Date()));
     });
   });
-  describe('Tester', () => {
-    it('do', () => {
-      const timestamp = '20190729T102550';
-      console.log(parseTimestamp(timestamp));
-      console.log(SAPDateSerializer(timestamp));
-      const timestamp2 = '20191112T1504';
-      console.log(parseTimestamp(timestamp2));
-      console.log(SAPDateSerializer(timestamp2));
-    });
-  });
 });
