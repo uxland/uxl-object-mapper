@@ -1,6 +1,6 @@
-export interface SerializerInfo<I, O> {
-  from: string | string[];
-  to?: string | string[];
-  serializerFn?: (...args: any | I) => O;
-  serializers?: SerializerInfo<any, any>[];
+export interface SerializerInfo<I, O, S = any, T = any> {
+  from: keyof I | Array<keyof I>;
+  to?: keyof O | Array<keyof O>;
+  serializerFn?: (...args: I[keyof I][]) => O[keyof O];
+  serializers?: SerializerInfo<S, T>[];
 }
