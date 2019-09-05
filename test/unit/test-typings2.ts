@@ -1,4 +1,3 @@
-import { addDays } from 'date-fns';
 import { AbapBoolean, SAPDateSerializer, serialize, SerializerInfo } from 'src';
 
 export interface IAvailableHourDay {
@@ -70,44 +69,24 @@ const serializers: SerializerInfo<ISAPAvailableHourDay, IAvailableHourDay>[] = [
 ];
 export const availableHoursDayMapper = (data: ISAPAvailableHourDay[], initDate: Date): IAvailableHourDay[] => {
   const response = serialize<ISAPAvailableHourDay, IAvailableHourDay>(data, serializers);
-  let mappedResponse = [];
-  const week = weekFactory(initDate);
-  Object.keys(week).forEach(k => {
-    let foundItem = response.find(d => d.date.toISOString() === k);
-    if (foundItem != undefined) {
-      mappedResponse.push(foundItem);
-    } else {
-      mappedResponse.push({
-        date: k,
-        afternoon: {
-          available: false
-        },
-        morning: {
-          available: false
-        }
-      });
-    }
-  });
-  return mappedResponse;
-};
-const physicianSerializers = [
-  {
-    from: 'ID',
-    to: 'id'
-  },
-  {
-    from: 'NAME',
-    to: 'name'
-  }
-];
-export const physiciansMapper = (data: ISAPTreatmentUnitPhysician[]): ITreatmentUnitPhysician[] =>
-  serialize<ISAPTreatmentUnitPhysician, ITreatmentUnitPhysician>(data, physicianSerializers);
-const weekFactory = (initDate: Date) => {
-  return {
-    [initDate.toISOString()]: {},
-    [addDays(initDate, 1).toISOString()]: {},
-    [addDays(initDate, 2).toISOString()]: {},
-    [addDays(initDate, 3).toISOString()]: {},
-    [addDays(initDate, 4).toISOString()]: {}
-  };
+  return response;
+  //   let mappedResponse = [];
+  //   const week = weekFactory(initDate);
+  //   Object.keys(week).forEach(k => {
+  //     let foundItem = response.find(d => d.date.toISOString() === k);
+  //     if (foundItem != undefined) {
+  //       mappedResponse.push(foundItem);
+  //     } else {
+  //       mappedResponse.push({
+  //         date: k,
+  //         afternoon: {
+  //           available: false
+  //         },
+  //         morning: {
+  //           available: false
+  //         }
+  //       });
+  //     }
+  //   });
+  //   return mappedResponse;
 };
