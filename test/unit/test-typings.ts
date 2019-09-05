@@ -64,13 +64,7 @@ const dataSerializer: any[] = [
     serializerFn: (date: string, time: string): string => (date && time ? R.concat(date, time) : undefined)
   }
 ];
-
-type ArrayDeserializer = SerializerInfo<ISAPClinicalCourse[], IClinicalCourse[]>;
-type ObjectDeserializer = SerializerInfo<ISAPClinicalCourse, IClinicalCourse>;
-
-const deserializer: Array<ArrayDeserializer | ObjectDeserializer> = [
-  ...dataSerializer,
-  { from: 'ID', to: 'id' },
+const deserializer: SerializerInfo<ISAPClinicalCourse, IClinicalCourse>[] = [
   { from: 'MODIFICATIONDATE', to: 'modificationDate' },
   { from: 'CONTENT', to: 'content' },
   { from: 'UNIT', to: 'unit' },
@@ -129,7 +123,9 @@ const dataObject: ISAPClinicalCourse = {
   SUBJECTIVE: undefined
 };
 
+type ArrayTest = Array<ISAPClinicalCourse>;
+
 export const clinicalCoursesMapperDeserializer = (data: ISAPClinicalCourse[]): IClinicalCourse[] =>
-  serialize<ISAPClinicalCourse[], IClinicalCourse[]>(dataArray, deserializer as ArrayDeserializer[]);
+  serialize<ISAPClinicalCourse, IClinicalCourse>(data, deserializer);
 export const clinicalCourseMapperDeserializer = (data: ISAPClinicalCourse): IClinicalCourse =>
-  serialize<ISAPClinicalCourse, IClinicalCourse>(dataObject, deserializer as ObjectDeserializer[]);
+  serialize<ISAPClinicalCourse, IClinicalCourse>(data, deserializer);
