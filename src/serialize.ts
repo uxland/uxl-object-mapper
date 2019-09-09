@@ -1,40 +1,21 @@
 import * as R from 'ramda';
-import { isArray, isInitial, isObject, notInitial } from '.';
+import { isArray, isInitial, isObject } from '.';
 import { SerializerInfo } from './model';
+import {
+  getFrom,
+  getSerializerFn,
+  getSerializers,
+  getTo,
+  hasFromTo,
+  hasSerializerFn,
+  hasSerializers,
+  isPath,
+  isSingleObject,
+  lensProp,
+  thrower
+} from './utilities';
 import { invalidPath, invalidSerializers } from './validation';
 
-const thrower = (message: string) => {
-  throw new Error(message);
-};
-const getFrom = R.prop('from');
-const getTo = (serializer?: any): string | string[] => serializer && R.prop('to')(serializer);
-const getFn = R.prop('serializerFn');
-const getSerializers = R.prop('serializers');
-const hasFrom = R.pipe(
-  getFrom,
-  notInitial
-);
-const hasTo = R.pipe(
-  getTo,
-  notInitial
-);
-const hasFn = R.pipe(
-  getFn,
-  notInitial
-);
-const hasSerializers = R.pipe(getSerializers);
-const hasFromTo = R.allPass([hasFrom, hasTo]);
-const isPath = R.pipe(
-  R.indexOf('.'),
-  R.complement(R.equals(-1))
-);
-const isSingleObject = R.allPass([
-  isArray,
-  R.pipe(
-    R.length,
-    R.equals(1)
-  )
-]);
 const buildFirstIndexPath = R.pipe(
   R.split('.'),
   (paths: string[]) => [paths[0], 0, ...R.remove(0, 1, paths)]
@@ -57,7 +38,6 @@ const getProp = (from: string | string[], data: any) =>
     ],
     [R.T, R.always(R.prop(from as string, data))]
   ])(from);
-const lensProp = (prop: string) => R.ifElse(isPath, () => R.lensPath(R.split('.')(prop)), () => R.lensProp(prop))(prop);
 const setOutput = (from: string, to: string, value: any) => R.set(lensProp(to || from), value || undefined);
 const multipleTo = (data: any, from: string | string[], to: string[]) =>
   R.cond([
@@ -81,7 +61,7 @@ const assignInputToOutput = (
   serializers?: any[]
 ) => (output: any) =>
   R.cond([
-    [hasFn, () => setOutput(from as string, to, executeFn(data, from, serializerFn))(output)],
+    [hasSerializerFn, () => setOutput(from as string, to, executeFn(data, from, serializerFn))(output)],
     [hasSerializers, () => setOutput(from as string, to, serialize(data, serializers))(output)],
     [R.T, () => setOutput(from as string, to, data)(output)]
   ])({
@@ -110,11 +90,18 @@ const serializeArray = <I, O>(i: I[], serializers: SerializerInfo<I, O>[]): O[] 
   R.reduce<I, O[]>((collection, d) => collection.concat(serialize(d, serializers)), [], i);
 const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
   R.reduce<SerializerInfo<I, O>, O>(
-    (o, s) => inToOut(i, getFrom(s) as string | string[], getTo(s), getFn(s as any), getSerializers(s as any))(o),
+    (o, s) =>
+      inToOut(i, getFrom(s) as string | string[], getTo(s), getSerializerFn(s as any), getSerializers(s as any))(o),
     {} as O,
     serializers
   );
 
+// Multiple serialize definitions (overload)
+/**
+ * Serialize data
+ * @param i Input data
+ * @param serializers Serializers array
+ */
 export function serialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]): O[];
 export function serialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
 export function serialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O | O[] {
@@ -128,3 +115,12 @@ export function serialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]
     ]
   ])(serializers);
 }
+
+/**
+ * TODO: Prepare console warnings for inconsistencies between serialization and deserialization.
+ * i.e.: When using sub-serializers with non-object structure:
+ * const input = {foo: 'bar'};
+ * const serializers = [{from: 'foo', serializers: [{from: 'bar'}]}];
+ * const output = serialize(input, serializers); // {foo: {bar: undefined}};
+ * This is not possible to deserialize
+ */
