@@ -129,7 +129,12 @@ const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
     serializers
   );
 
-// Multiple deserialize definitions (overload)
+/**
+ * Deserialize data using serializers. This should be used only on objects serialized with the same serializers array,
+ * and the object should not have change its structure.
+ * @param i Input data. Can be an object or an array
+ * @param serializers Serializers array. Must contain at least a "from" property.
+ */
 export function deserialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]): O[];
 export function deserialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
 export function deserialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O | O[] {

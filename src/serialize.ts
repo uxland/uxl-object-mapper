@@ -96,11 +96,10 @@ const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
     serializers
   );
 
-// Multiple serialize definitions (overload)
 /**
- * Serialize data
- * @param i Input data
- * @param serializers Serializers array
+ * Serialize data using serializers
+ * @param i Input data. Can be an object or an array
+ * @param serializers Serializers array. Must contain at least a "from" property.
  */
 export function serialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]): O[];
 export function serialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
