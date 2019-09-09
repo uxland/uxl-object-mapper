@@ -96,6 +96,14 @@ describe('Serializer', () => {
         const output = { date: '20190101', time: '100000' };
         expect(serialize(input, serializers)).toStrictEqual(output);
       });
+      it('if "to" property is an array an has a serializeFn, duplicate input[from] to N output[serializeFn(to[n])]', () => {
+        const input = { foo: 'bar' };
+        const serializers: anySerializerInfo = [
+          { from: 'foo', to: ['FOO', 'BAR'], serializerFn: value => value.toUpperCase() }
+        ];
+        const output = { FOO: 'BAR', BAR: 'BAR' };
+        expect(serialize(input, serializers)).toStrictEqual(output);
+      });
       it('if "to" is a path or single property, it must have a serializerFn', () => {
         const input = { date: '20190101', time: '100000' };
         const serializers: anySerializerInfo = [{ from: ['date', 'time'], to: 'date' }];

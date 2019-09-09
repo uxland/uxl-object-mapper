@@ -1,7 +1,7 @@
 import { deserialize } from '../../src/deserialize';
 import { SerializerInfo } from '../../src/model';
 import { serialize } from '../../src/serialize';
-import { invalidSerializerStructure, requiredFrom, requiredSerializeFn } from '../../src/validation';
+import { invalidPath, invalidSerializerStructure, requiredFrom, requiredSerializeFn } from '../../src/validation';
 
 interface anySerializerInfo extends Array<SerializerInfo<any, any, any, any>> {}
 
@@ -67,6 +67,19 @@ describe('Deserializer', () => {
       const output = serialize(input, serializers);
       expect(deserialize(output, serializers)).toStrictEqual(input);
     });
+    it('if "to" property is an array an has a deserializeFn, duplicate input[from] to N output[deserializeFn(to[n])]', () => {
+      const input = { foo: 'bar' };
+      const serializers: anySerializerInfo = [
+        {
+          from: 'foo',
+          to: ['FOO', 'BAR'],
+          serializerFn: value => value.toUpperCase(),
+          deserializerFn: value => value.toLowerCase()
+        }
+      ];
+      const output = serialize(input, serializers);
+      expect(deserialize(output, serializers)).toStrictEqual(input);
+    });
     it('if input[from] is an array, output[to] must be equal to input[from]', () => {
       const input = { foo: ['bar'] };
       const serializers: anySerializerInfo = [{ from: 'foo', to: ['FOO', 'BAR'] }];
@@ -85,6 +98,12 @@ describe('Deserializer', () => {
         const serializers: anySerializerInfo = [{ from: 'foo.bar', to: 'qux.quux' }];
         const output = serialize(input, serializers);
         expect(deserialize(output, serializers)).toStrictEqual(input);
+      });
+      it('if "from" is a path, output[to] must be equal to input[path]', () => {
+        const output = { foo: 'baz' };
+        const serializers: anySerializerInfo = [{ from: 'foo', to: 'foo.bar' }];
+        const serializerError = () => deserialize(output, serializers);
+        expect(serializerError).toThrow(invalidPath);
       });
     });
     describe('and "from" is any properties array', () => {

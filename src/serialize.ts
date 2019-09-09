@@ -39,10 +39,10 @@ const getProp = (from: string | string[], data: any) =>
     [R.T, R.always(R.prop(from as string, data))]
   ])(from);
 const setOutput = (from: string, to: string, value: any) => R.set(lensProp(to || from), value || undefined);
-const multipleTo = (data: any, from: string | string[], to: string[]) =>
+const multipleTo = (data: any, from: string | string[], to: string[], fn: Function) =>
   R.cond([
-    [R.equals, () => R.reduce((collection, toK: string) => inToOut(data, toK, toK)(collection), {}, to)],
-    [R.T, () => R.reduce((collection, toK: string) => inToOut(data, from, toK)(collection), {}, to)]
+    [R.equals, () => R.reduce((collection, toK: string) => inToOut(data, toK, toK, fn)(collection), {}, to)],
+    [R.T, () => R.reduce((collection, toK: string) => inToOut(data, from, toK, fn)(collection), {}, to)]
   ])(from, to);
 const executeFn = (data: any, from: string | string[], fn: Function) =>
   R.ifElse(
@@ -76,7 +76,7 @@ const inToOut = (data: any, from: string | string[], to?: string | string[], fn?
       hasFromTo,
       () =>
         R.cond([
-          [isArray, () => multipleTo(data, from, to as string[])],
+          [isArray, () => multipleTo(data, from, to as string[], fn)],
           [R.T, R.always(assignInputToOutput(getProp(from, data), from, to as string, fn, serializers)(output))]
         ])(to)
     ],
