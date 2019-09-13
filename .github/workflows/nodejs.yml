@@ -8,6 +8,8 @@ on:
 
 jobs:
   build:
+    name: Build
+    description: Install, test and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -20,10 +22,12 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   deploy:
+    name: Deploy
+    description: Deploys to corresponding registry
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to npm
+      - name: Deploy to registry
         run: npx semantic-release --no-ci --dry-run --debug
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
