@@ -28,6 +28,6 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           CI: true
       - name: deploy
-        run: npx semantic-release --no-ci --debug
+        run: npx semantic-release --no-ci --dry-run --debug
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
