@@ -13,10 +13,8 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions/setup-node@v1
       - name: Use Node.js ${{ matrix.node-version }}
-
         with:
           node-version: ${{ matrix.node-version }}
-      - uses: uxland/actions/ci/npm@master
       # - name: npm install and test
       #   env:
       #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -25,6 +23,7 @@ jobs:
       #     npm install
       #     npm run test:unit
       - name: build
+        uses: uxland/actions/ci/npm@master
         run: npm run dist
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
