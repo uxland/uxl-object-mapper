@@ -11,18 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - uses: actions/setup-node@v1
       - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      # - name: npm install and test
-      #   env:
-      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      #     CI: true
-      #   run: |
-      #     npm install
-      #     npm run test:unit
-      - uses: uxland/actions/ci/npm@master
+      - name: Install and test
+        uses: uxland/actions/ci/npm@master
       - name: build
         run: npm run dist
         env:
