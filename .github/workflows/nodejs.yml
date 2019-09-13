@@ -17,6 +17,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install and test
         uses: uxland/actions/ci/npm@master
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: build
         run: npm run dist
         env:
