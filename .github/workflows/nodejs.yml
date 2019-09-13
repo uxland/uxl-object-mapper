@@ -11,19 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
       - name: Install and test
         uses: uxland/actions/ci/npm@master
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: build
+      - name: Build
         run: npm run dist
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   deploy:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to npm
