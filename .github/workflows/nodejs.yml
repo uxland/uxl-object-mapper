@@ -10,25 +10,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      env: 
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       - uses: actions/checkout@v1
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
-        with:
-          node-version: ${{ matrix.node-version }}
       - name: npm install and test
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          CI: true
         run: |
           npm install
           npm run test:unit
       - name: build
         run: npm run dist
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          CI: true
       - name: deploy
         run: npx semantic-release --no-ci --dry-run --debug
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
