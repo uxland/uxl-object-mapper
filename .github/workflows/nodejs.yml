@@ -30,4 +30,4 @@ jobs:
       - name: deploy
         run: npx semantic-release --no-ci --dry-run --debug
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
