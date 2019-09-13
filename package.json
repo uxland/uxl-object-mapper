@@ -49,6 +49,7 @@
     "test:ui:watch": "nodemon --watch test --watch src -x \"polymer test --config-file wct.config.json\"",
     "test:ui": "polymer test --config-file wct.config.json",
     "test:unit": "jest --collect-coverage",
+    "test": "npm run test:unit",
     "travis-deploy-once": "travis-deploy-once",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"
