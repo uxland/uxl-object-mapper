@@ -1,4 +1,4 @@
-name: Node CI
+name: CI/CD
 
 on:
   push:
@@ -9,7 +9,6 @@ on:
 jobs:
   build:
     name: Build
-    description: Install, test and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
@@ -23,7 +22,6 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
   deploy:
     name: Deploy
-    description: Deploys to corresponding registry
     needs: build
     runs-on: ubuntu-latest
     steps:
