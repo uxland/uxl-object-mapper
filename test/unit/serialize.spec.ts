@@ -75,6 +75,12 @@ describe('Serializer', () => {
       const output = { FOO: ['bar'], BAR: ['bar'] };
       expect(serialize(input, serializers)).toStrictEqual(output);
     });
+    it('if input[from] is empty, output must be empty too', () => {
+      const input = { foo: '' };
+      const serializers: anySerializerInfo = [{ from: 'foo', to: 'FOO' }];
+      const output = { FOO: '' };
+      expect(serialize(input, serializers)).toStrictEqual(output);
+    });
     describe('and "from" and/or "to" is a path', () => {
       it('if "to" is a path, output[path] must be equal to input[from]', () => {
         const input = { foo: 'baz' };

@@ -1,3 +1,4 @@
+import { SAPBooleanSerializer } from '../../src/boolean-serializer';
 import { deserialize } from '../../src/deserialize';
 import { serialize } from '../../src/serialize';
 
@@ -23,5 +24,11 @@ describe('Sandbox', () => {
     const output = serialize(input, serializers); // {foo: 'bar'};
     expect(serialize(input, serializers)).toStrictEqual({ baz: 'bar' });
     expect(deserialize(output, serializers)).toStrictEqual(input); // {foo: {baz: 'bar'}};
+  });
+  it('if input[from] is empty string, when using SAPBooleanSerializer, output must be false', () => {
+    const input = { foo: '' };
+    const output = { FOO: false };
+    const serializers: any = [{ from: 'foo', to: 'FOO', serializerFn: SAPBooleanSerializer }];
+    expect(serialize(input, serializers)).toStrictEqual(output);
   });
 });

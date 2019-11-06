@@ -38,7 +38,8 @@ const getProp = (from: string | string[], data: any) =>
     ],
     [R.T, R.always(R.prop(from as string, data))]
   ])(from);
-const setOutput = (from: string, to: string, value: any) => R.set(lensProp(to || from), value || undefined);
+const setOutput = (from: string, to: string, value: any) =>
+  R.set(lensProp(to || from), R.isNil(value) ? undefined : value);
 const multipleTo = (data: any, from: string | string[], to: string[], fn: Function) =>
   R.cond([
     [R.equals, () => R.reduce((collection, toK: string) => inToOut(data, toK, toK, fn)(collection), {}, to)],
