@@ -20,13 +20,8 @@ jobs:
         run: npm run dist
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-  deploy:
-    name: Deploy
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - name: Deploy to registry
-        run: npx semantic-release --no-ci --dry-run --debug
+        run: npx semantic-release --no-ci --debug
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
