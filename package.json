@@ -20,19 +20,20 @@
     "@types/jest": "^24.0.12",
     "@types/jest-when": "^2.4.0",
     "@types/ramda": "^0.26.16",
+    "chance": "^1.0.18",
+    "date-fns": "^2.0.0-beta.3",
     "husky": "^3.0.0",
     "jest": "^24.5.0",
     "jest-when": "^2.5.0",
     "jsdom": "^11.11.0",
     "mutation-observer": "^1.0.3",
-    "semantic-release": "^15.9.12",
+    "semantic-release": "^16.0.0-beta.22",
     "travis-deploy-once": "^5.0.7",
     "ts-jest": "^24.0.2",
     "tslib": "^1.10.0",
     "typescript": "^3.3.3"
   },
   "dependencies": {
-    "date-fns": "^2.0.0-beta.2",
     "ramda": "^0.26.1"
   },
   "scripts": {
@@ -42,10 +43,13 @@
     "dist": "npm run build",
     "readme:coverage": "node_modules/.bin/jest-badges-readme",
     "semantic-release": "semantic-release",
+    "semantic-release:local": "npm run dist && semantic-release --no-ci --debug",
+    "postsemantic-release:local": "git checkout -- package*",
     "tdd": "jest --watch --collect-coverage",
     "test:ui:watch": "nodemon --watch test --watch src -x \"polymer test --config-file wct.config.json\"",
     "test:ui": "polymer test --config-file wct.config.json",
     "test:unit": "jest --collect-coverage",
+    "test": "npm run test:unit",
     "travis-deploy-once": "travis-deploy-once",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch"

@@ -1,0 +1,27 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - master
+      - beta
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install and test
+        uses: uxland/actions/ci/npm@master
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Build
+        run: npm run dist
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Deploy to registry
+        run: npx semantic-release --no-ci --debug
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
