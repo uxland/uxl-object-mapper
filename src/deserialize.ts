@@ -31,12 +31,12 @@ const getProp = (from: string | string[], data: any) =>
       isPath,
       () =>
         R.cond([
-          [isObject, R.always(R.path(R.split('.', from as string), data))],
-          [isSingleObject, R.always(R.path(buildFirstIndexPath(from as string), data))],
+          [isObject, () => R.path(R.split('.', from as string), data)],
+          [isSingleObject, () => R.path(buildFirstIndexPath(from as string), data)],
           [R.T, () => thrower(invalidPath)]
         ])(R.prop(R.split('.', from as string)[0], data))
     ],
-    [R.T, R.always(R.prop(from as string, data))]
+    [R.T, () => R.prop(from as string, data)]
   ])(from);
 const setOutputMultipleTo = (to: string[], values: any[], output) => {
   R.forEachObjIndexed(
@@ -55,9 +55,9 @@ const setOutput = (from: string, to: string | string[], value: any) => output =>
       R.ifElse(
         isArray,
         () => setOutputMultipleTo(to as string[], value, output),
-        () => setProperty(output, (to as string) || from, value)
+        () => setProperty(output, from, to as string, value)
       )(value),
-    () => setProperty(output, (to as string) || from, value)
+    () => setProperty(output, from, to as string, value)
   )(to);
 const executeFn = (data: any, from: string | string[], fn: Function) =>
   R.ifElse(
@@ -110,12 +110,12 @@ const inToOut = (data: any, from: string | string[], to?: string | string[], fn?
         ],
         [
           fromIsArray,
-          R.always(assignInputToOutput(getProp(from[0], data), from[0], to as string, fn, serializers)(output))
+          () => assignInputToOutput(getProp(from[0], data), from[0], to as string, fn, serializers)(output)
         ],
-        [R.T, R.always(assignInputToOutput(getProp(from, data), from, to as string, fn, serializers)(output))]
+        [R.T, () => assignInputToOutput(getProp(from, data), from, to as string, fn, serializers)(output)]
       ])
     ],
-    [R.T, R.always(assignInputToOutput(getProp(from, data), from, undefined, fn, serializers)(output))]
+    [R.T, () => assignInputToOutput(getProp(from, data), from, undefined, fn, serializers)(output)]
   ])({
     from,
     to
@@ -140,8 +140,8 @@ export function deserialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]):
 export function deserialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
 export function deserialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O | O[] {
   return R.cond([
-    [isInitial, R.always(i)],
-    [invalidSerializers, R.always(i)],
+    [isInitial, () => i],
+    [invalidSerializers, () => i],
     [
       R.T,
       () =>

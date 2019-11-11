@@ -48,19 +48,22 @@ export const lensProp = (prop: string) =>
 
 export const getPath = (prop: string) => R.ifElse(isPath, () => R.split('.')(prop), () => prop)(prop);
 
-export const setProperty = (obj: any, prop: string, value: any) => {
-  const path = getPath(prop);
+export const setProperty = (obj: any, from: string, to: string, value: any) => {
+  const path = getPath(to || from);
   const parsedValue = R.isNil(value) ? undefined : value;
   return R.ifElse(
     isArray,
     () => {
       for (let i = path.length - 1; i >= 0; i--) {
         const prop = path[i];
-        if (i == path.length - 1) obj = { ...obj, [prop]: parsedValue };
+        if (i == path.length - 1) obj[prop] = parsedValue;
         else obj = { [prop]: obj };
       }
       return obj;
     },
-    () => (obj = { ...obj, [path]: parsedValue })
+    () => {
+      obj[path] = parsedValue;
+      return obj;
+    }
   )(path);
 };
