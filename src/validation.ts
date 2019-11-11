@@ -8,7 +8,7 @@ export const invalidSerializerStructure = 'Cannot define serializerFn and serial
 export const invalidPath = 'Path can only be used for objects and single object arrays';
 
 export const validateSerializers = <S, D>(serializers: SerializerInfo<S, D>[]): boolean => {
-  serializers.forEach(s => {
+  serializers?.forEach(s => {
     if (!s.from) throw new Error(requiredFrom);
     if (s.from && isArray(s.from) && !isArray(s.to) && !s.serializerFn) throw new Error(requiredSerializeFn);
     if (s.serializerFn && s.serializers) throw new Error(invalidSerializerStructure);

@@ -1,5 +1,5 @@
 import * as R from 'ramda';
-import { invalidPath, invalidSerializers, isArray, isInitial, isObject } from '.';
+import { invalidPath, isArray, isInitial, isObject, validSerializers } from '.';
 import { SerializerInfo } from './model';
 import {
   getDeserializerFn,
@@ -55,9 +55,9 @@ const setOutput = (from: string, to: string | string[], value: any) => output =>
       R.ifElse(
         isArray,
         () => setOutputMultipleTo(to as string[], value, output),
-        () => setProperty(output, from, to as string, value)
+        () => setProperty(from, to as string, value)(output)
       )(value),
-    () => setProperty(output, from, to as string, value)
+    () => setProperty(from, to as string, value)(output)
   )(to);
 const executeFn = (data: any, from: string | string[], fn: Function) =>
   R.ifElse(
@@ -139,13 +139,19 @@ const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
 export function deserialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]): O[];
 export function deserialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
 export function deserialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O | O[] {
-  return R.cond([
-    [isInitial, () => i],
-    [invalidSerializers, () => i],
-    [
-      R.T,
-      () =>
-        R.ifElse(isArray, () => serializeArray(i as I[], serializers), () => serializeObject(i as I, serializers))(i)
-    ]
-  ])(serializers);
+  return R.ifElse(
+    validSerializers,
+    () =>
+      R.cond([
+        [isInitial, () => i],
+        [
+          R.T,
+          () =>
+            R.ifElse(isArray, () => serializeArray(i as I[], serializers), () => serializeObject(i as I, serializers))(
+              i
+            )
+        ]
+      ])(serializers),
+    R.always(i)
+  )(serializers);
 }
