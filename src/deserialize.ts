@@ -12,6 +12,7 @@ import {
   isPath,
   isSingleObject,
   lensProp,
+  setProperty,
   thrower
 } from './utilities';
 
@@ -54,9 +55,9 @@ const setOutput = (from: string, to: string | string[], value: any) => output =>
       R.ifElse(
         isArray,
         () => setOutputMultipleTo(to as string[], value, output),
-        R.always(R.set(lensProp((to as string) || from), value || undefined)(output))
+        () => setProperty(output, (to as string) || from, value)
       )(value),
-    R.always(R.set(lensProp((to as string) || from), value || undefined)(output))
+    () => setProperty(output, (to as string) || from, value)
   )(to);
 const executeFn = (data: any, from: string | string[], fn: Function) =>
   R.ifElse(

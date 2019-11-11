@@ -45,3 +45,22 @@ export const isSingleObject = R.allPass([
 ]);
 export const lensProp = (prop: string) =>
   R.ifElse(isPath, () => R.lensPath(R.split('.')(prop)), () => R.lensProp(prop))(prop);
+
+export const getPath = (prop: string) => R.ifElse(isPath, () => R.split('.')(prop), () => prop)(prop);
+
+export const setProperty = (obj: any, prop: string, value: any) => {
+  const path = getPath(prop);
+  const parsedValue = R.isNil(value) ? undefined : value;
+  return R.ifElse(
+    isArray,
+    () => {
+      for (let i = path.length - 1; i >= 0; i--) {
+        const prop = path[i];
+        if (i == path.length - 1) obj = { ...obj, [prop]: parsedValue };
+        else obj = { [prop]: obj };
+      }
+      return obj;
+    },
+    () => (obj = { ...obj, [path]: parsedValue })
+  )(path);
+};
