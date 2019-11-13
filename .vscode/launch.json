@@ -6,9 +6,9 @@
   "configurations": [
     {
       "type": "node",
-      "name": "vscode-jest-tests",
+      "name": "Debug Jest Tests",
       "request": "launch",
-      "args": ["--runInBand", "--watch"],
+      "args": ["--runInBand", "--watch", "--coverage", "false"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
