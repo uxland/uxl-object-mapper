@@ -2,7 +2,7 @@
 
 | Build Status                                                                                                                  | Statements                                    | Branches                                  | Functions                                   | Lines                               |
 | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------------------------------- | ------------------------------------------- | ----------------------------------- |
-| [![Build Status](https://api.travis-ci.org/uxland/uxl-object-mapper.svg)](https://api.travis-ci.org/uxland/uxl-object-mapper) | ![Statements](https://img.shields.io/badge/Coverage-92.77%25-brightgreen.svg 'Make me better!') | ![Branches](https://img.shields.io/badge/Coverage-86.57%25-yellow.svg 'Make me better!') | ![Functions](https://img.shields.io/badge/Coverage-85.98%25-yellow.svg 'Make me better!') | ![Lines](https://img.shields.io/badge/Coverage-93.68%25-brightgreen.svg 'Make me better!') |
+| [![Build Status](https://api.travis-ci.org/uxland/uxl-object-mapper.svg)](https://api.travis-ci.org/uxland/uxl-object-mapper) | ![Statements](https://img.shields.io/badge/Coverage-95.5%25-brightgreen.svg 'Make me better!') | ![Branches](https://img.shields.io/badge/Coverage-90.59%25-brightgreen.svg 'Make me better!') | ![Functions](https://img.shields.io/badge/Coverage-90%25-brightgreen.svg 'Make me better!') | ![Lines](https://img.shields.io/badge/Coverage-96.22%25-brightgreen.svg 'Make me better!') |
 
 ## Installation
 

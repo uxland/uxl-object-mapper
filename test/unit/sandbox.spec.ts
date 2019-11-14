@@ -1,12 +1,13 @@
+// import { ObjectMapper } from 'json-object-mapper';
 import { ObjectMapper } from 'json-object-mapper';
 import 'reflect-metadata';
 import { SAPBooleanSerializer } from '../../src/boolean-serializer';
 import { deserialize } from '../../src/deserialize';
 import { serialize } from '../../src/serialize';
 import { serialize as serializeSet } from '../../src/serialize-set';
-import { input } from './data/input';
-import { MedicalReport } from './data/json-object-mapper';
-import { serializers } from './data/serializers';
+import { input } from './sap/input';
+import { MedicalReport } from './sap/json-object-mapper';
+import { serializers } from './sap/serializers';
 
 describe('Sandbox', () => {
   it('From plain to plain', () => {
@@ -38,10 +39,12 @@ describe('Sandbox', () => {
     expect(serialize(input, serializers)).toStrictEqual(output);
   });
   it('Massive object serialization: uxl-object-mapper vs json-object-mapper', () => {
-    const nTests: number = 1;
-    let resultsUXL: number[] = [];
-    let resultsUXLSet: number[] = [];
-    let resultsJSON: number[] = [];
+    const nTests: number = 50;
+    let results = {
+      uxl: [],
+      set: [],
+      json: []
+    };
     for (let i = 0; i < nTests; i++) {
       const t1 = performance.now();
       serialize(input, serializers);
@@ -50,24 +53,31 @@ describe('Sandbox', () => {
       const t3 = performance.now();
       ObjectMapper.deserializeArray(MedicalReport, input);
       const t4 = performance.now();
-      resultsUXL.push(t2 - t1);
-      resultsUXLSet.push(t3 - t2);
-      resultsJSON.push(t4 - t3);
+      results.uxl.push(t2 - t1);
+      results.set.push(t3 - t2);
+      results.json.push(t4 - t3);
     }
-    const uxlMeanTime = resultsUXL.reduce((acc, time) => (acc += time), 0) / nTests;
-    const uxlSetMeanTime = resultsUXLSet.reduce((acc, time) => (acc += time), 0) / nTests;
-    const jsonMeanTime = resultsJSON.reduce((acc, time) => (acc += time), 0) / nTests;
-    console.log(
-      `[json-object-mapper] Mean Time: ${jsonMeanTime} ms
-      \n[uxl-object-mapper] Mean Time: ${uxlMeanTime} ms
-      \n[uxl-object-mapper - SET] Mean Time: ${uxlSetMeanTime} ms`
-    );
+    let means = {
+      uxl: results.uxl.reduce((acc, time) => (acc += time), 0) / nTests,
+      set: results.set.reduce((acc, time) => (acc += time), 0) / nTests,
+      json: results.json.reduce((acc, time) => (acc += time), 0) / nTests
+    };
+    means = { ...means, ['uxl vs json']: means.uxl / means.json };
+    console.table(means);
     expect(true).toBeTruthy();
-
-    // expect(serialize(input, serializers)).toStrictEqual(output);
-    // expect(ObjectMapper.deserializeArray(MedicalReport, input)).toStrictEqual(output);
-
-    // const serialization = serialize(input, serializers);
-    // expect(serialization).toStrictEqual(output);
+  });
+  it('Test serializer overhead', () => {
+    const a = new Array(1000);
+    const nIterations = 10;
+    const results = [];
+    for (let i = 0; i < nIterations; i++) {
+      const t1 = performance.now();
+      serialize(a, []);
+      const t2 = performance.now();
+      results.push(t2 - t1);
+    }
+    const overhead = results.reduce((acc, time) => (acc += time), 0) / nIterations;
+    // console.log(`Serializer overhead: ${results.reduce((acc, time) => (acc += time), 0) / nIterations}`);
+    expect(overhead).toBeLessThan(0.1);
   });
 });

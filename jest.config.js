@@ -9,6 +9,11 @@ module.exports = {
     '^.+\\.ts$': 'ts-jest',
     '^.+.ts$': 'ts-jest'
   },
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '<rootDir>/test/unit/benchmark.spec.ts',
+    '<rootDir>/test/unit/sandbox.spec.ts'
+  ],
   coverageReporters: ['json-summary', 'text', 'lcov'],
   collectCoverage: true,
   globals: {

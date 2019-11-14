@@ -36,6 +36,6 @@ export const serializers: any = [
   { from: 'URL', to: 'url' },
   { from: 'PDF', to: 'pdf' },
   { from: 'CPC', to: 'cpc' },
-  { from: 'PATNR', to: 'patientId' },
-  { from: ['DATE', 'TIME'], to: 'dateTime', serializerFn: (date, time) => `${date}${time}` }
+  { from: 'PATNR', to: 'patientId' }
+  // { from: ['DATE', 'TIME'], to: 'dateTime', serializerFn: (date, time) => `${date}${time}` }
 ];
