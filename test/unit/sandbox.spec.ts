@@ -4,11 +4,10 @@ import 'reflect-metadata';
 import { SAPBooleanSerializer } from '../../src/boolean-serializer';
 import { deserialize } from '../../src/deserialize';
 import { serialize } from '../../src/serialize';
-// import { serialize as serializeSet } from '../../src/serialize-set';
-// import { input } from './sap/input';
-// import { MedicalReport } from './sap/json-object-mapper';
-// import { serializers } from './sap/serializers';
-import * as generators from './data/generators';
+import { serialize as serializeSet } from '../../src/serialize-set';
+import { input } from './sap/input';
+import { MedicalReport } from './sap/json-object-mapper';
+import { serializers } from './sap/serializers';
 
 describe('Sandbox', () => {
   it('From plain to plain', () => {
@@ -40,58 +39,33 @@ describe('Sandbox', () => {
     expect(serialize(input, serializers)).toStrictEqual(output);
   });
   it('Massive object serialization: uxl-object-mapper vs json-object-mapper', () => {
-    const nIterations: number = 100;
-    const input = generators.input(1000, 0);
-    const output = generators.output(1000, 0);
-    const results = {
+    const nTests: number = 50;
+    let results = {
       uxl: [],
+      set: [],
       json: []
     };
-    for (let i = 0; i < nIterations; i++) {
+    for (let i = 0; i < nTests; i++) {
       const t1 = performance.now();
-      serialize(input, generators.serializers);
+      serialize(input, serializers);
       const t2 = performance.now();
-      ObjectMapper.deserializeArray(generators.JsonSerializer, input);
+      serializeSet(input, serializers);
       const t3 = performance.now();
+      ObjectMapper.deserializeArray(MedicalReport, input);
+      const t4 = performance.now();
       results.uxl.push(t2 - t1);
-      results.json.push(t3 - t2);
+      results.set.push(t3 - t2);
+      results.json.push(t4 - t3);
     }
-    expect(serialize(input, generators.serializers)).toStrictEqual(output);
-    expect(ObjectMapper.deserializeArray(generators.JsonSerializer, input)).toEqual(output);
-    const means = {
-      uxl: results.uxl.reduce((acc, time) => (acc += time), 0) / nIterations,
-      json: results.json.reduce((acc, time) => (acc += time), 0) / nIterations
+    let means = {
+      uxl: results.uxl.reduce((acc, time) => (acc += time), 0) / nTests,
+      set: results.set.reduce((acc, time) => (acc += time), 0) / nTests,
+      json: results.json.reduce((acc, time) => (acc += time), 0) / nTests
     };
+    means = { ...means, ['uxl vs json']: means.uxl / means.json };
     console.table(means);
+    expect(true).toBeTruthy();
   });
-  // it('Massive object serialization: uxl-object-mapper vs json-object-mapper', () => {
-  // const nTests: number = 50;
-  // let results = {
-  //   uxl: [],
-  //   set: [],
-  //   json: []
-  // };
-  // for (let i = 0; i < nTests; i++) {
-  //   const t1 = performance.now();
-  //   serialize(input, serializers);
-  //   const t2 = performance.now();
-  //   serializeSet(input, serializers);
-  //   const t3 = performance.now();
-  //   ObjectMapper.deserializeArray(MedicalReport, input);
-  //   const t4 = performance.now();
-  //   results.uxl.push(t2 - t1);
-  //   results.set.push(t3 - t2);
-  //   results.json.push(t4 - t3);
-  // }
-  // let means = {
-  //   uxl: results.uxl.reduce((acc, time) => (acc += time), 0) / nTests,
-  //   set: results.set.reduce((acc, time) => (acc += time), 0) / nTests,
-  //   json: results.json.reduce((acc, time) => (acc += time), 0) / nTests
-  // };
-  // means = { ...means, ['uxl vs json']: means.uxl / means.json };
-  // console.table(means);
-  // expect(true).toBeTruthy();
-  // });
   it('Test serializer overhead', () => {
     const a = new Array(1000);
     const nIterations = 10;

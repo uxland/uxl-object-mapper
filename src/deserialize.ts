@@ -16,10 +16,7 @@ import {
   thrower
 } from './utilities';
 
-const buildFirstIndexPath = R.pipe(
-  R.split('.'),
-  (paths: string[]) => [paths[0], 0, ...R.remove(0, 1, paths)]
-);
+const buildFirstIndexPath = R.pipe(R.split('.'), (paths: string[]) => [paths[0], 0, ...R.remove(0, 1, paths)]);
 const getProp = (from: string | string[], data: any) =>
   R.cond([
     [
@@ -39,13 +36,10 @@ const getProp = (from: string | string[], data: any) =>
     [R.T, () => R.prop(from as string, data)]
   ])(from);
 const setOutputMultipleTo = (to: string[], values: any[], output) => {
-  R.forEachObjIndexed(
-    (toK: string, i) => {
-      output = R.set(lensProp(toK), values[i])(output);
-      return output;
-    },
-    to as string[]
-  );
+  R.forEachObjIndexed((toK: string, i) => {
+    output = R.set(lensProp(toK), values[i])(output);
+    return output;
+  }, to as string[]);
   return output;
 };
 const setOutput = (from: string, to: string | string[], value: any) => output =>
@@ -64,9 +58,11 @@ const executeFn = (data: any, from: string | string[], fn: Function) =>
     isArray,
     () => fn(...data),
     () =>
-      R.ifElse(isArray, () => R.reduce((collection: any[], d) => collection.concat(fn(d)), [], data), () => fn(data))(
-        data
-      )
+      R.ifElse(
+        isArray,
+        () => R.reduce((collection: any[], d) => collection.concat(fn(d)), [], data),
+        () => fn(data)
+      )(data)
   )(from);
 const assignInputToOutput = (
   data: any,
@@ -139,19 +135,18 @@ const serializeObject = <I, O>(i: I, serializers: SerializerInfo<I, O>[]): O =>
 export function deserialize<I, O>(i: I[], serializers?: SerializerInfo<I, O>[]): O[];
 export function deserialize<I, O>(i: I, serializers?: SerializerInfo<I, O>[]): O;
 export function deserialize<I, O>(i: I | I[], serializers?: SerializerInfo<I, O>[]): O | O[] {
-  return R.ifElse(
-    validSerializers,
-    () =>
-      R.cond([
-        [isInitial, () => i],
-        [
-          R.T,
-          () =>
-            R.ifElse(isArray, () => serializeArray(i as I[], serializers), () => serializeObject(i as I, serializers))(
-              i
-            )
-        ]
-      ])(serializers),
-    R.always(i)
-  )(serializers);
+  if (validSerializers(serializers))
+    return R.cond([
+      [isInitial, () => i],
+      [
+        R.T,
+        () =>
+          R.ifElse(
+            isArray,
+            () => serializeArray(i as I[], serializers),
+            () => serializeObject(i as I, serializers)
+          )(i)
+      ]
+    ])(serializers);
+  return i as any;
 }
