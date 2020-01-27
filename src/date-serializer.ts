@@ -22,8 +22,16 @@ const hasTSeparator = R.pipe(
   R.equals(-1),
   R.not
 );
+
+const hasSpaceSeparator = R.pipe(
+  R.indexOf(' '),
+  R.equals(-1),
+  R.not
+);
 const splitTimestamp = timestamp =>
-  R.cond([[hasTSeparator, R.always(R.split('T', timestamp))], [R.T, R.always(R.split(' ', timestamp))]])(timestamp);
+  R.cond([[hasTSeparator, R.split('T')], 
+  [hasSpaceSeparator, R.split(' ')],
+  [R.T, timestamp=> [timestamp, '120000']]])(timestamp);
 const parseDate = (date: string) =>
   R.pipe(
     R.length,

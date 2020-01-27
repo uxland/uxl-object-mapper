@@ -70,5 +70,9 @@ describe('Date serializer', () => {
       const timestamp = '20190101 102502';
       expect(SAPDateSerializer(timestamp)).toStrictEqual(parse(timestamp, 'yyyyMMdd HHmmss', new Date()));
     });
+    it('given a date in "yyyymmdd" format, it must return a date in format at "12:00:00', () => {
+      const timestamp = '20190101';
+      expect(SAPDateSerializer(timestamp)).toStrictEqual(parse(timestamp+' 120000', 'yyyyMMdd HHmmss', new Date()));
+    });
   });
 });
