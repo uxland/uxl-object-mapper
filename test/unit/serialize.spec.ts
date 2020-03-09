@@ -161,6 +161,15 @@ describe('Serializer', () => {
       const output = { foo: { bar: undefined } };
       expect(serialize(input, serializers)).toStrictEqual(output);
     });
+    it('if input[from] is undefined, then output should be undefined too', () => {
+      const input = { HISTORIC: { ID: 'foo' } };
+      const serializers: anySerializerInfo = [
+        { from: 'HISTORIC', to: 'historic', serializers: [{ from: 'ID', to: 'id' }] },
+        { from: 'CATALOG', to: 'catalog', serializers: [{ from: 'ID', to: 'id' }] }
+      ];
+      const output = { historic: { id: 'foo' }, catalog: { id: undefined } };
+      expect(serialize(input, serializers)).toStrictEqual(output);
+    });
     it('if input[from] is an object, serialize input[from] to output[to] using sub-serializers', () => {
       const input = { foo: { bar: 'baz' } };
       const serializers: anySerializerInfo = [{ from: 'foo', to: 'FOO', serializers: [{ from: 'bar' }] }];

@@ -29,7 +29,9 @@ const getProp = (from: string | string[], data: any) =>
     ? getPropForArray(from as string[], data)
     : isPath(from as string[])
     ? getPropForPath(from as string, data)
-    : data[from as string];
+    : data
+    ? data[from as string]
+    : undefined;
 const multipleTo = (data: any, from: string | string[], to: string[], fn: Function) =>
   to.reduce((collection, toK: string) => inToOut(data, R.equals(from, to) ? toK : from, toK, fn)(collection), {});
 const executeFn = (data: any, from: string | string[], fn: Function) =>
